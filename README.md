@@ -3,14 +3,19 @@ Chatty is a real-time chat application built with **NestJS** and **React**. It a
 
 ---
 
-## 🧰 Technologies
-- **NestJS** — Backend framework for Node.js. (https://nestjs.com/)
-- **React** — UI library for building interfaces. (https://reactjs.org/)
-- **Socket.IO** — Real-time communication (WebSockets). (https://socket.io/)
-- **MongoDB** — Document-oriented NoSQL database. (https://www.mongodb.com/)
-- **Material UI (MUI)** — Ready-to-use React components. (https://mui.com/)
+## ⚙️ Technology Stack
 
-> These technologies help build a scalable application with real-time capabilities and a modern UI.
+[![React](https://img.shields.io/badge/React-17.0.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org) [![NestJS](https://img.shields.io/badge/NestJS-9.x-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com) [![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-010101?logo=socketdotio&logoColor=white)](https://socket.io) [![MongoDB](https://img.shields.io/badge/MongoDB-6.x-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/) [![Redis](https://img.shields.io/badge/Redis-7.x-D82C20?logo=redis&logoColor=white)](https://redis.io/) [![MUI](https://img.shields.io/badge/MUI-5.x-007FFF?logo=mui&logoColor=white)](https://mui.com)
+
+A concise list of the main technologies used:
+- **React** — https://reactjs.org/
+- **NestJS** — https://nestjs.com/
+- **Socket.IO** — https://socket.io/
+- **MongoDB** — https://www.mongodb.com/
+- **Redis** — https://redis.io/
+- **Material UI (MUI)** — https://mui.com/
+
+These technologies help build a scalable application with real-time capabilities and a modern UI.
 
 ---
 
