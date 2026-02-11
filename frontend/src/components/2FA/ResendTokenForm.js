@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Grid, Alert } from '@mui/material';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import CircleIcon from '@mui/icons-material/Circle';
 import useAuth from '../../hooks/useAuth'; 
 import { useHistory } from 'react-router-dom';
 
@@ -48,12 +48,12 @@ const ResendTokenForm = () => {
             >
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%', mt: 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 2 }}>
-                        <Box sx={{ width: 45, height: 50, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', bgcolor: '#2186EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ArrowDropDownIcon sx={{ color: 'white', fontSize: 40 }} />
-                        </Box>
+                        <Box sx={{ width: 45, height: 45, borderRadius: '50%', bgcolor: '#2186EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
+                                </Box>
 
                         <Typography component="h1" variant="h5" sx={{ fontWeight: 502 }}>
-                            BlockVault
+                            chatty
                         </Typography>
                     </Box>
 

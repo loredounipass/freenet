@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import { useHistory } from 'react-router-dom';
 import {
-  ArrowDropDown as ArrowDropDownIcon,
+  Circle as CircleIcon,
   RssFeed as RssFeedIcon,
   LiveTv as LiveTvIcon,
   ChatBubbleOutline as ChatIcon,
@@ -119,9 +119,9 @@ function DashboardContent() {
   ];
 
   const navItems = [
-    { href: '/welcome', label: 'Feed', Icon: RssFeedIcon },
-    { href: '/providers', label: 'Live', Icon: LiveTvIcon },
-    { href: '/create', label: 'chat', Icon: ChatIcon },
+    { href: '/feed', label: 'Feed', Icon: RssFeedIcon },
+    { href: '/live', label: 'Live', Icon: LiveTvIcon },
+    { href: '/chat', label: 'chat', Icon: ChatIcon },
   ];
 
   const renderNavLinks = () => (
@@ -182,15 +182,15 @@ function DashboardContent() {
                 <Box
                   sx={{
                     width: 45,
-                    height: 50,
-                    clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                    height: 45,
+                    borderRadius: '50%',
                     bgcolor: '#2186EB',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <ArrowDropDownIcon sx={{ color: 'white', fontSize: 40 }} />
+                  <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
                 </Box>
 
                 <Typography
@@ -201,7 +201,7 @@ function DashboardContent() {
                     lineHeight: 1,
                   }}
                 >
-                  BlockVault
+                  chatty
                 </Typography>
               </Box>
             </Link>

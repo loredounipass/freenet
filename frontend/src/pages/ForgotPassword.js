@@ -10,7 +10,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material'
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import CircleIcon from '@mui/icons-material/Circle'
 import { post, forgotPasswordApi } from '../api/http'
 import { useHistory } from 'react-router-dom'
 
@@ -88,15 +88,15 @@ export default function ForgotPassword() {
             <Box
               sx={{
                 width: 45,
-                height: 50,
-                clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                height: 45,
+                borderRadius: '50%',
                 bgcolor: '#2186EB',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <ArrowDropDownIcon sx={{ color: 'white', fontSize: 40 }} />
+              <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
             </Box>
 
             <Typography component="h1" variant="h5" sx={{ fontWeight: 502 }}>
