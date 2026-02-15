@@ -9,7 +9,7 @@ import connectRedis from 'connect-redis';
 import Redis from 'ioredis';
 import session from 'express-session';
 
-@WebSocketGateway({ namespace: '/messages', cors: { origin: '*' } })
+@WebSocketGateway({ namespace: '/messages', cors: { origin: ['http://localhost:3000'], credentials: true } })
 export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
