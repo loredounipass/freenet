@@ -17,7 +17,7 @@ export class EmailService {
   // Sends a login token email to the user with security tips
   async sendTokenLogin(toEmail: string, token: string): Promise<void> {
     const mailOptions = {
-      from: 'chatty <noreply@chatty.com>',
+      from: 'freenet <noreply@freenet.com>',
       to: toEmail,
       subject: 'Token de verificación para iniciar sesión',
       html: `
@@ -42,7 +42,7 @@ export class EmailService {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>chatty</h1>
+                  <h1>freenet</h1>
                 </div>
                 <div class="content">
                     <p>Hola,</p>
@@ -52,7 +52,7 @@ export class EmailService {
                      <span>TOKEN:</span> <strong>${token}</strong>
                     </div>
 
-                    <p class="important">Token expirará en 1 minutos.</p>
+                    <p class="important">Token expirará en 5 minutos.</p>
                     <div class="security-tips">
                         <h4>Consejos para proteger tus fondos:</h4>
                         <ul>
@@ -66,7 +66,7 @@ export class EmailService {
                 </div>
                 <div class="footer">
                     <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-                    <p>Gracias por usar chatty.</p>
+                    <p>Gracias por usar freenet.</p>
                 </div>
             </div>
         </body>
@@ -95,7 +95,7 @@ export class EmailService {
     const verificationUrl = `https://cuddly-broccoli-x795wpw9p55fpg5r-3000.app.github.dev/verifyemail`;
 
     const mailOptions = {
-      from: 'chatty <noreply@chatty.com>',
+      from: 'freenet <noreply@freenet.com>',
       to: email,
       subject: 'Verifica tu correo electrónico',
       html: `
@@ -118,8 +118,8 @@ export class EmailService {
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <h1>chatty</h1>
+              <div class="header">
+              <h1>freenet</h1>
             </div>
             <div class="content">
               <p class="lead">Hola,</p>
@@ -136,7 +136,7 @@ export class EmailService {
             </div>
               <div class="footer">
               <div>Consejos para proteger tu cuenta: utiliza 2FA y no compartas tus credenciales.</div>
-              <div style="margin-top:8px">Gracias por usar chatty.</div>
+              <div style="margin-top:8px">Gracias por usar freenet.</div>
             </div>
           </div>
         </body>
@@ -159,7 +159,7 @@ export class EmailService {
     )}&token=${encodeURIComponent(token)}`;
 
     const mailOptions = {
-      from: 'chatty <noreply@chatty.com>',
+      from: 'freenet <noreply@freenet.com>',
       to: email,
       subject: 'Restablece tu contraseña',
       html: `
@@ -183,7 +183,7 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>chatty</h1>
+              <h1>freenet</h1>
             </div>
             <div class="content">
               <p class="lead">Hola,</p>
@@ -201,7 +201,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <div>Consejos para proteger tu cuenta: utiliza 2FA y no compartas tus credenciales.</div>
-              <div style="margin-top:8px">Gracias por usar chatty.</div>
+              <div style="margin-top:8px">Gracias por usar freenet.</div>
             </div>
           </div>
         </body>
@@ -220,7 +220,7 @@ export class EmailService {
 // Sends a login notification email to the user with security tips
   async sendLoginNotificationEmail(toEmail: string): Promise<void> {
     const mailOptions = {
-      from: 'chatty <noreply@chatty.com>',
+      from: 'freenet <noreply@freenet.com>',
       to: toEmail,
       subject: 'Notificación de Inicio de sesión',
       html: `
@@ -244,7 +244,7 @@ export class EmailService {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>chatty</h1>
+                    <h1>freenet</h1>
                 </div>
                 <div class="content">
                     <p>Hola,</p>
@@ -264,7 +264,7 @@ export class EmailService {
                 </div>
                 <div class="footer">
                     <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-                    <p>Gracias por usar chatty.</p>
+                    <p>Gracias por usar freenet.</p>
                 </div>
             </div>
         </body>
