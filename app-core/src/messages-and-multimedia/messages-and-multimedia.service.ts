@@ -23,6 +23,34 @@ export class MessagesAndMultimediaService {
     private readonly storage: LocalStorageProvider,
   ) {}
 
+  // Listen for multimedia processing events to keep message.multimediaStatus in sync
+  onModuleInit() {
+    try {
+      this.eventEmitter.on('multimedia.ready', async (payload: any) => {
+        try {
+          if (payload?.messageId) {
+            await this.messageModel.findByIdAndUpdate(payload.messageId, {
+              multimediaStatus: 'ready',
+              multimediaUrl: payload.url,
+            }).exec();
+            this.eventEmitter.emit('message.updated', { messageId: payload.messageId, multimediaStatus: 'ready', multimediaUrl: payload.url });
+          }
+        } catch (_) {}
+      });
+
+      this.eventEmitter.on('multimedia.failed', async (payload: any) => {
+        try {
+          if (payload?.messageId) {
+            await this.messageModel.findByIdAndUpdate(payload.messageId, {
+              multimediaStatus: 'failed',
+            }).exec();
+            this.eventEmitter.emit('message.updated', { messageId: payload.messageId, multimediaStatus: 'failed' });
+          }
+        } catch (_) {}
+      });
+    } catch (_) {}
+  }
+
 
 
   // Create a new message. This method only expects a DTO and a validated senderId string.
