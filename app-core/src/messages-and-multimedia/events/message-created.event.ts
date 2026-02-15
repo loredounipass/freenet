@@ -4,7 +4,7 @@ export interface MessageCreatedEvent {
   type: string;
   sender: string;
   receiver: string;
-  multimediaUrl?: string;
+  multimediaId?: string;
   status: 'sent' | 'delivered' | 'read';
   createdAt: Date;
   updatedAt: Date;

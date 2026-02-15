@@ -21,7 +21,7 @@ export class CreateMessageDto {
 
   @IsOptional()
   @IsString()
-  multimediaUrl?: string;
+  multimediaId?: string;
 
   
   @IsString()

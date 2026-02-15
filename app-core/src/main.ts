@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
+import * as express from 'express';
+import { join } from 'path';
+
 import connectRedis from 'connect-redis';
 import Redis from 'ioredis'
 
@@ -48,6 +51,9 @@ async function bootstrap() {
 
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Serve uploaded files (multimedia staging & final) as static assets
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   await app.listen(parseInt(process.env.PORT!));
 }

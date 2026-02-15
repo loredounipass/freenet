@@ -17,8 +17,11 @@ export class Message {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   receiver: Types.ObjectId;
 
-  @Prop()
-  multimediaUrl?: string;
+  @Prop({ type: Types.ObjectId, ref: 'Multimedia' })
+  multimediaId?: Types.ObjectId;
+
+  @Prop({ enum: ['uploading', 'processing', 'ready', 'failed'], required: false })
+  multimediaStatus?: string;
 
   @Prop({ enum: ['sent', 'delivered', 'read'], default: 'sent' })
   status: string;

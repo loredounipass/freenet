@@ -19,6 +19,28 @@ export class Multimedia {
 
   @Prop({ type: Types.ObjectId, ref: 'Message' })
   message?: Types.ObjectId;
+
+  // Processing metadata
+  @Prop()
+  mimeType?: string;
+
+  @Prop()
+  size?: number;
+
+  @Prop()
+  duration?: number;
+
+  @Prop()
+  width?: number;
+
+  @Prop()
+  height?: number;
+
+  @Prop()
+  thumbnailUrl?: string;
+
+  @Prop({ enum: ['uploading', 'processing', 'ready', 'failed'], default: 'uploading' })
+  status?: string;
 }
 
 export const MultimediaSchema = SchemaFactory.createForClass(Multimedia);

@@ -26,6 +26,7 @@
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.2.0",
     "@nestjs/core": "^9.0.0",
+    "@nestjs/event-emitter": "^1.0.0",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/mongoose": "^9.2.1",
@@ -34,14 +35,17 @@
     "@nestjs/platform-socket.io": "^11.1.13",
     "@nestjs/throttler": "^3.1.0",
     "@nestjs/websockets": "^11.1.13",
-    "@nestjs/event-emitter": "^1.0.0",
     "bcryptjs": "^3.0.3",
     "bull": "^4.16.5",
     "bullmq": "^3.4.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "connect-redis": "^6.1.3",
+    "express": "4.20.0",
     "express-session": "^1.17.3",
+    "ffmpeg-static": "^5.1.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.2",
     "ioredis": "^5.2.4",
     "mongoose": "^6.8.0",
     "multer": "^1.4.5-lts.1",
@@ -51,6 +55,7 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",
+    "sharp": "0.32.6",
     "socket.io": "^4.8.3",
     "uuid": "^9.0.0",
     "uuidv4": "^6.2.13"
@@ -95,7 +100,13 @@
       "webpack": "5.94.0",
       "@nestjs/common": "10.4.16",
       "eslint": "9.26.0"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "@nestjs/core",
+      "ffmpeg-static",
+      "msgpackr-extract",
+      "sharp"
+    ]
   },
   "jest": {
     "moduleFileExtensions": [
