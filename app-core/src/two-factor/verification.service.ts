@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { EmailService } from '../user/email.service';
 import { Token } from './schemas/verification.schema';
 import { HashService } from '../user/hash.service';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class TwoFactorAuthService {
@@ -27,35 +28,47 @@ export class TwoFactorAuthService {
   // Verify the token provided by the user
   async verifyToken(toEmail: string, token: string): Promise<{ isValid: boolean; message: string }> {
     try {
-      const tokenEntry = await this.tokenModel.findOne({ email: toEmail }).sort({ createdAt: -1 }).exec();
-      if (!tokenEntry) {
-        return { isValid: false, message: 'Token incorrecto o correo electrónico incorrecto' };
-      }
+      // atomic-safe token verification to avoid race conditions
+      const tokenEntry = await this.tokenModel.findOne({ email: toEmail }).exec();
 
-      const currentTime = Date.now();
-      const tokenAge = currentTime - tokenEntry.createdAt.getTime();
-      if (tokenAge > this.TOKEN_EXPIRY_MS) {
-        await this.tokenModel.deleteOne({ _id: tokenEntry._id }).exec();
-        return { isValid: false, message: 'Token expirado' };
+      // Dummy hash to equalize timing when tokenEntry is missing
+      const DUMMY_HASH = bcrypt.hashSync('000000', 12);
+
+      if (!tokenEntry) {
+        // Perform a dummy compare to mitigate timing attacks
+        await this.hashService.comparePassword(token, DUMMY_HASH);
+        return { isValid: false, message: 'Token inválido o expirado' };
       }
 
       if (tokenEntry.isValid) {
         return { isValid: false, message: 'Token ya validado' };
       }
 
-      if (tokenEntry.attempts >= this.MAX_ATTEMPTS) {
+      if ((tokenEntry.attempts || 0) >= this.MAX_ATTEMPTS) {
         return { isValid: false, message: 'Demasiados intentos. Intenta más tarde.' };
       }
 
       const isMatch = await this.hashService.comparePassword(token, tokenEntry.tokenHash);
       if (!isMatch) {
-        tokenEntry.attempts = (tokenEntry.attempts || 0) + 1;
-        await tokenEntry.save();
-        return { isValid: false, message: 'Token incorrecto' };
+        // increment attempts atomically
+        await this.tokenModel.findOneAndUpdate(
+          { _id: tokenEntry._id, isValid: false, attempts: { $lt: this.MAX_ATTEMPTS } },
+          { $inc: { attempts: 1 } }
+        ).exec();
+        return { isValid: false, message: 'Token inválido o expirado' };
       }
 
-      tokenEntry.isValid = true;
-      await tokenEntry.save();
+      // Try to atomically mark token as used. Only one request will succeed.
+      const updated = await this.tokenModel.findOneAndUpdate(
+        { _id: tokenEntry._id, isValid: false, attempts: { $lt: this.MAX_ATTEMPTS } },
+        { $set: { isValid: true } },
+        { new: true }
+      ).exec();
+
+      if (!updated) {
+        return { isValid: false, message: 'Token ya validado o inválido' };
+      }
+
       return { isValid: true, message: 'Token validado correctamente' };
     } catch (error) {
       console.error('Error en la verificación del token', error);
@@ -73,10 +86,12 @@ export class TwoFactorAuthService {
   // Internal method to create a new token, save it, and send it via email
   private async createAndSendToken(toEmail: string): Promise<{ message: string }> {
     try {
-      const last = await this.tokenModel.findOne({ email: toEmail }).sort({ createdAt: -1 }).exec();
       const now = Date.now();
-      if (last && last.lastSentAt && (now - last.lastSentAt) < this.COOLDOWN_MS) {
-        const remainingMs = this.COOLDOWN_MS - (now - last.lastSentAt);
+
+      // Find existing token entry for this email
+      const existing = await this.tokenModel.findOne({ email: toEmail }).exec();
+      if (existing && existing.lastSentAt && (now - existing.lastSentAt) < this.COOLDOWN_MS) {
+        const remainingMs = this.COOLDOWN_MS - (now - existing.lastSentAt);
         const remainingSec = Math.ceil(remainingMs / 1000);
         throw new BadRequestException(`Debes esperar ${remainingSec} segundos antes de solicitar otro token.`);
       }
@@ -84,14 +99,20 @@ export class TwoFactorAuthService {
       const token = await this.emailService.generateToken();
       const tokenHash = await this.hashService.hashPassword(token);
 
-      await this.tokenModel.create({
-        email: toEmail,
-        tokenHash,
-        createdAt: new Date(),
-        isValid: false,
-        attempts: 0,
-        lastSentAt: now,
-      });
+      // Upsert a single active token document per email. This reduces writes and keeps only
+      // one token record per user (invalidates previous tokens by replacing them).
+      await this.tokenModel.findOneAndUpdate(
+        { email: toEmail },
+        {
+          email: toEmail,
+          tokenHash,
+          createdAt: new Date(),
+          isValid: false,
+          attempts: 0,
+          lastSentAt: now,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ).exec();
 
       await this.emailService.sendTokenLogin(toEmail, token);
       return { message: `Token enviado a ${toEmail}` };

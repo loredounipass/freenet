@@ -29,15 +29,15 @@ export class AuthService {
   }
 
 
-  // This method handles the login process for a user. It first validates the user's credentials using the validateUser method. If the credentials are valid and the user has two-factor authentication enabled, it sends a verification code to the user's email and returns a message indicating that 2FA is required. If 2FA is not enabled, it proceeds to perform the login operation by calling the performLogin method, which uses Passport's req.login to establish a session for the user.
-  async login(loginUserDto: LoginUserDto, req: any): Promise<any> {
-    const { email, password } = loginUserDto;
-    const user = await this.validateUser(email, password);
+  // Handle login given an already-validated `user` (from Passport `req.user`).
+  // This avoids re-querying the database and re-checking the password.
+  async login(user: any, req: any): Promise<any> {
     if (!user) {
       throw new UnauthorizedException('Credenciales incorrectas.');
     }
     if ((user as any).isTokenEnabled) {
-      await this.twoFactorAuthService.sendToken(email);
+      // send token for 2FA flow
+      await this.twoFactorAuthService.sendToken((user as any).email);
       return { requires2FA: true, msg: 'Código de verificación enviado a tu correo electrónico.' };
     }
 

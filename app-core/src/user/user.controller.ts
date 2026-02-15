@@ -41,8 +41,9 @@ export class UserController {
   // Route for user login. It uses the LocalAuthGuard to authenticate the user based on the provided credentials in the LoginUserDto. If authentication is successful, it calls the login method of the AuthService to generate a JWT token and handle two-factor authentication if enabled.
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async loginUser(@Body() loginUserDto: LoginUserDto, @Request() req) {
-    return this.authService.login(loginUserDto, req);
+  async loginUser(@Request() req) {
+    // Passport has already validated credentials and populated `req.user`.
+    return this.authService.login(req.user, req);
   }
 
 
@@ -56,8 +57,13 @@ export class UserController {
   // Route for resending the two-factor authentication token. It accepts an email address in the request body and calls the resendToken method of the TwoFactorAuthService to send a new token to the user's email.
   @Post('resend-token')
   async resendToken(@Body() { email }: { email: string }) {
-    await this.twoFactorAuthService.resendToken(email);
-    return { message: 'Código de verificación reenviado a tu correo electrónico.' };
+    try {
+      await this.twoFactorAuthService.resendToken(email);
+    } catch (err) {
+      // Do not reveal details (cooldown, non-existent email, etc.) to avoid enumeration.
+      console.error('resendToken error:', err.message || err);
+    }
+    return { message: 'Si el correo existe, se ha enviado un código de verificación.' };
   }
 
 
