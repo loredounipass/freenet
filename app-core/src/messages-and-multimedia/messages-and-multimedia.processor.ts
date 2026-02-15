@@ -16,10 +16,70 @@ import * as os from 'os';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { finished } from 'stream/promises';
+import { execSync } from 'child_process';
 
 
-ffmpeg.setFfmpegPath(ffmpegPath || undefined);
-ffmpeg.setFfprobePath((ffprobePath && (ffprobePath as any).path) || undefined);
+// Prefer the bundled static binaries, but verify they exist. If pnpm flattened packages
+// or install issues removed the binary, fall back to system `ffmpeg`/`ffprobe`.
+try {
+  const resolvedFfmpegPath = ffmpegPath || undefined;
+      if (resolvedFfmpegPath) {
+    if ((fs as any).existsSync && (fs as any).existsSync(resolvedFfmpegPath)) {
+      ffmpeg.setFfmpegPath(resolvedFfmpegPath);
+    } else {
+      // Try to locate ffmpeg in system PATH
+      try {
+        const whichCmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
+        const out = execSync(whichCmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(/\r?\n/).filter(Boolean)[0];
+        if (out) {
+          ffmpeg.setFfmpegPath(out);
+        } else {
+          ffmpeg.setFfmpegPath(undefined);
+        }
+      } catch (e) {
+        ffmpeg.setFfmpegPath(undefined);
+      }
+    }
+  } else {
+    
+    try {
+      const whichCmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
+      const out = execSync(whichCmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(/\r?\n/).filter(Boolean)[0];
+      if (out) {
+        ffmpeg.setFfmpegPath(out);
+      } else {
+        ffmpeg.setFfmpegPath(undefined);
+      }
+    } catch (e) {
+      
+      ffmpeg.setFfmpegPath(undefined);
+    }
+  }
+} catch (e) {
+  try { ffmpeg.setFfmpegPath(undefined); } catch (_) {}
+}
+
+try {
+  const probePath = (ffprobePath && (ffprobePath as any).path) || ffprobePath || undefined;
+  if (probePath && (fs as any).existsSync && (fs as any).existsSync(probePath)) {
+    ffmpeg.setFfprobePath(probePath);
+  } else {
+    // Try to locate ffprobe in system PATH
+    try {
+      const whichProbe = process.platform === 'win32' ? 'where ffprobe' : 'which ffprobe';
+      const outp = execSync(whichProbe, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(/\r?\n/).filter(Boolean)[0];
+      if (outp) {
+        ffmpeg.setFfprobePath(outp);
+      } else {
+        try { ffmpeg.setFfprobePath(undefined); } catch (_) {}
+      }
+    } catch (e) {
+      try { ffmpeg.setFfprobePath(undefined); } catch (_) {}
+    }
+  }
+} catch (e) {
+  try { ffmpeg.setFfprobePath(undefined); } catch (_) {}
+}
 
 @Processor('multimedia')
 @Injectable()
@@ -33,6 +93,7 @@ export class MultimediaProcessor {
   @Process('process')
   async handle(job: Job) {
     const { stagingKey, multimediaId } = job.data;
+    
     // download object from storage provider (staging)
     // Prefer stream download when available to avoid buffering large files entirely in RAM
     const tmpDir = os.tmpdir();
@@ -53,6 +114,7 @@ export class MultimediaProcessor {
 
     // determine mime
     const mime = job.data.mimeType || 'application/octet-stream';
+    
 
     try {
       // simple branching by mime
@@ -94,26 +156,86 @@ export class MultimediaProcessor {
       } else if (mime.startsWith('video/')) {
         // process video files via temp files so ffmpeg works without buffering entire file
         const tempOut = path.join(tmpDir, `out-${baseName}.mp4`);
+        
+        // probe for duration/metadata (ffprobe)
+        let durationSec: number | undefined = undefined;
+          try {
+            const probe: any = await new Promise<any>((resolve, reject) => {
+              ffmpeg.ffprobe(tempIn, (err: any, data: any) => (err ? reject(err) : resolve(data)));
+            });
+            durationSec = probe?.format?.duration ? Number(probe.format.duration) : undefined;
+            // extract video stream resolution if available
+            let width: number | undefined = undefined;
+            let height: number | undefined = undefined;
+            try {
+              const vstream = (probe?.streams || []).find((s: any) => s.width && s.height);
+              if (vstream) {
+                width = Number(vstream.width) || undefined;
+                height = Number(vstream.height) || undefined;
+              }
+            } catch (_) {}
+            // attach to metadata later
+            (metadata as any).duration = durationSec;
+            if (width) (metadata as any).width = width;
+            if (height) (metadata as any).height = height;
+          } catch (probeErr) {
+            durationSec = undefined;
+          }
         await new Promise<void>((resolve, reject) => {
-          ffmpeg(tempIn).videoCodec('libx264').outputOptions(['-preset', 'fast']).save(tempOut).on('end', resolve).on('error', reject);
+          const proc = ffmpeg(tempIn)
+            .videoCodec('libx264')
+            .outputOptions(['-preset', 'fast'])
+            .save(tempOut)
+            .on('start', (_cmd: string) => {
+            })
+            .on('progress', (progress: any) => {
+              try {
+                let percent: number | undefined = undefined;
+                const tm = progress.timemark;
+                if (durationSec && tm && tm !== 'N/A') {
+                  const parts = tm.split(':').map((v: string) => Number(v) || 0);
+                  const seconds = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts.length === 2 ? parts[0] * 60 + parts[1] : parts[0];
+                  percent = durationSec ? Math.min(100, (seconds / durationSec) * 100) : undefined;
+                }
+              } catch (_) {}
+            })
+            .on('stderr', (_stderrLine: string) => {
+            })
+            .on('end', () => {
+              resolve();
+            })
+            .on('error', (_e: any) => {
+              reject(_e);
+            });
         });
 
         let uploadRes: any;
-        if (typeof (this.storage as any).uploadStream === 'function') {
-          const outStream = fs.createReadStream(tempOut);
-          uploadRes = await (this.storage as any).uploadStream(outStream, finalKey, 'video/mp4');
-        } else {
-          const outBuf = await fsPromises.readFile(tempOut);
-          uploadRes = await this.storage.upload(outBuf, finalKey, 'video/mp4');
+        try {
+          if (typeof (this.storage as any).uploadStream === 'function') {
+            const outStream = fs.createReadStream(tempOut);
+            uploadRes = await (this.storage as any).uploadStream(outStream, finalKey, 'video/mp4');
+          } else {
+            const outBuf = await fsPromises.readFile(tempOut);
+            uploadRes = await this.storage.upload(outBuf, finalKey, 'video/mp4');
+          }
+          
+        } catch (upErr) {
+          console.error('[MultimediaProcessor] upload failed for video', upErr);
+          throw upErr;
         }
 
         // thumbnail
         const thumbName = `thumb-${baseName}.jpg`;
+        
         await new Promise<void>((resolve, reject) => {
           ffmpeg(tempOut)
             .screenshots({ count: 1, folder: tmpDir, filename: thumbName })
-            .on('end', resolve)
-            .on('error', reject);
+            .on('end', () => {
+              resolve();
+            })
+            .on('error', (_e: any) => {
+              reject(_e);
+            });
         });
         try {
           if (typeof (this.storage as any).uploadStream === 'function') {
@@ -125,8 +247,11 @@ export class MultimediaProcessor {
             const thumbRes = await this.storage.upload(thumbBuf, `thumbs/${crypto.randomUUID()}-${stagingKey.split('/').pop()}`, 'image/jpeg');
             thumbnailUrl = thumbRes.url;
           }
-        } catch (_) {}
-        metadata = { /* could probe for duration/size using ffprobe if needed */ };
+        } catch (thumbUploadErr) {
+          
+        }
+        // metadata may have been partially populated from ffprobe above
+        metadata = { ...(metadata || {}), duration: (metadata as any).duration || durationSec, width: (metadata as any).width, height: (metadata as any).height };
         try { await fsPromises.unlink(tempIn); await fsPromises.unlink(tempOut); await fsPromises.unlink(path.join(tmpDir, thumbName)); } catch (_) {}
         finalKey = uploadRes.key;
       } else if (mime.startsWith('audio/')) {
@@ -134,8 +259,8 @@ export class MultimediaProcessor {
         let probe: any = undefined;
         try {
           probe = await new Promise<any>((resolve, reject) => {
-            ffmpeg.ffprobe(tempIn, (err: any, data: any) => (err ? reject(err) : resolve(data)));
-          });
+              ffmpeg.ffprobe(tempIn, (err: any, data: any) => (err ? reject(err) : resolve(data)));
+            });
         } catch (_) {
           probe = undefined;
         }
@@ -176,7 +301,10 @@ export class MultimediaProcessor {
       try { await this.storage.delete(stagingKey); } catch (_) {}
 
     } catch (err) {
-      await this.multimediaModel.findByIdAndUpdate(multimediaId, { status: 'failed' }).exec();
+      const errorPayload: any = { status: 'failed' };
+      try { errorPayload.lastError = err && err.message ? err.message : String(err); } catch (_) { errorPayload.lastError = 'unknown'; }
+      try { errorPayload.lastErrorStack = err && err.stack ? err.stack : undefined; } catch (_) {}
+      await this.multimediaModel.findByIdAndUpdate(multimediaId, errorPayload as any).exec();
       throw err;
     } finally {
       // ensure temp files are cleaned even on unexpected errors
