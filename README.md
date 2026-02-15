@@ -59,6 +59,19 @@ pnpm install
 pnpm start
 ```
 
+```bash
+Binary files install
+
+Ignored build scripts: @nestjs/core, ffmpeg-static, msgpackr-extract, sharp.
+
+Run "pnpm approve-builds"
+
+visit https://ffmpeg.org/download.html#build-windows
+
+download ffmpeg manually
+
+```
+
 The backend listens by default on `http://localhost:4000` and exposes the API under `/secure/api`.
 
 ### Frontend (`frontend`)
