@@ -104,17 +104,28 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   // No business logic in gateway: listen domain events and emit sockets
   @OnEvent('message.created')
-  handleMessageCreatedEvent(payload: MessageCreatedEvent) {
+  async handleMessageCreatedEvent(payload: MessageCreatedEvent) {
     try {
       const senderId = payload.sender;
       const receiverId = payload.receiver;
       if (!senderId || !receiverId) return;
 
       const room = this.makeChatRoom(senderId, receiverId);
-      // emit to chat room, receiver personal room and sender personal room (sync multi-tabs)
-      this.server.to(room).emit('receiveMessage', payload);
-      this.server.to(`user:${receiverId}`).emit('receiveMessage', payload);
-      this.server.to(`user:${senderId}`).emit('messageSent', payload);
+      // gather unique socket ids for targets to avoid duplicate emits
+      const roomSockets = await this.server.in(room).allSockets();
+      const receiverSockets = await this.server.in(`user:${receiverId}`).allSockets();
+      const senderSockets = await this.server.in(`user:${senderId}`).allSockets();
+
+      const receiveTargets = new Set<string>([...roomSockets, ...receiverSockets]);
+      // emit 'receiveMessage' once per unique socket
+      for (const sockId of receiveTargets) {
+        this.server.to(sockId).emit('receiveMessage', payload);
+      }
+
+      // emit 'messageSent' to sender sockets (unique)
+      for (const sockId of senderSockets) {
+        this.server.to(sockId).emit('messageSent', payload);
+      }
     } catch (err) {
       this.logger.warn(`Error emitting message.created event: ${err}`);
     }

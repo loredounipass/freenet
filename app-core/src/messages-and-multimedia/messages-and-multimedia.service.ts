@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Message, MessageDocument } from './schemas/message.schema';
@@ -151,8 +152,8 @@ export class MessagesAndMultimediaService {
     const receiverExists = await this.userService.getUserById(dto.receiverId);
     if (!receiverExists) throw new NotFoundException('Receiver not found');
 
-    // upload to staging (temporary storage)
-    const stagingKey = `staging/${Date.now()}-${file.originalname}`;
+    // upload to staging (temporary storage) - use a crypto UUID for uniqueness under concurrency
+    const stagingKey = `staging/${crypto.randomUUID()}-${file.originalname}`;
     const uploadResult = await this.storage.upload(file.buffer, stagingKey, file.mimetype);
 
     // Create multimedia doc with status uploading

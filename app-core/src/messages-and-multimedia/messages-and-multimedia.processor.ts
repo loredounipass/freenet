@@ -10,9 +10,12 @@ import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
 import ffprobePath from 'ffprobe-static';
-import * as fs from 'fs/promises';
+import * as fsPromises from 'fs/promises';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as crypto from 'crypto';
+import { finished } from 'stream/promises';
 
 
 ffmpeg.setFfmpegPath(ffmpegPath || undefined);
@@ -30,42 +33,80 @@ export class MultimediaProcessor {
   @Process('process')
   async handle(job: Job) {
     const { stagingKey, multimediaId } = job.data;
-
     // download object from storage provider (staging)
-    const buffer = await this.storage.download(stagingKey);
+    // Prefer stream download when available to avoid buffering large files entirely in RAM
+    const tmpDir = os.tmpdir();
+    const baseName = `${crypto.randomUUID()}-${stagingKey.split('/').pop()}`;
+    const tempIn = path.join(tmpDir, baseName);
+    const hasDownloadStream = typeof (this.storage as any).downloadStream === 'function';
+    if (hasDownloadStream) {
+      // stream to temp file
+      await fsPromises.mkdir(path.dirname(tempIn), { recursive: true }).catch(() => {});
+      const read = (this.storage as any).downloadStream(stagingKey) as NodeJS.ReadableStream;
+      const write = fs.createWriteStream(tempIn);
+      read.pipe(write);
+      await finished(write);
+    } else {
+      const buffer = await this.storage.download(stagingKey);
+      await fsPromises.writeFile(tempIn, buffer);
+    }
 
     // determine mime
     const mime = job.data.mimeType || 'application/octet-stream';
 
     try {
       // simple branching by mime
-      let finalKey = `final/${Date.now()}-${stagingKey.split('/').pop()}`;
+      let finalKey = `final/${crypto.randomUUID()}-${stagingKey.split('/').pop()}`;
       let thumbnailUrl: string | undefined;
       let metadata: any = {};
 
       if (mime.startsWith('image/')) {
-        // optimize image
-        const optimized = await sharp(buffer).toBuffer();
-        const uploadRes = await this.storage.upload(optimized, finalKey, mime);
-        // thumbnail
-        const thumb = await sharp(buffer).resize({ width: 200 }).toBuffer();
-        const thumbRes = await this.storage.upload(thumb, `thumbs/${Date.now()}-${stagingKey.split('/').pop()}` , mime);
-        thumbnailUrl = thumbRes.url;
-        const meta = await sharp(buffer).metadata();
+        // process image from temp file to avoid buffering in memory
+        const optName = `opt-${baseName}`;
+        const optPath = path.join(tmpDir, optName);
+        const thumbName = `thumb-${baseName}.jpg`;
+        const thumbPath = path.join(tmpDir, thumbName);
+
+        await sharp(tempIn).toFile(optPath);
+        await sharp(tempIn).resize({ width: 200 }).toFile(thumbPath);
+        const meta = await sharp(tempIn).metadata();
         metadata = { width: meta.width, height: meta.height, format: meta.format };
-        finalKey = uploadRes.key;
+
+        // upload optimized and thumbnail using stream upload if available
+        if (typeof (this.storage as any).uploadStream === 'function') {
+          const optStream = fs.createReadStream(optPath);
+          const uploadRes = await (this.storage as any).uploadStream(optStream, finalKey, mime);
+          const thumbStream = fs.createReadStream(thumbPath);
+          const thumbRes = await (this.storage as any).uploadStream(thumbStream, `thumbs/${crypto.randomUUID()}-${stagingKey.split('/').pop()}`, mime);
+          thumbnailUrl = thumbRes.url;
+          finalKey = uploadRes.key;
+        } else {
+          const optBuf = await fsPromises.readFile(optPath);
+          const uploadRes = await this.storage.upload(optBuf, finalKey, mime);
+          const thumbBuf = await fsPromises.readFile(thumbPath);
+          const thumbRes = await this.storage.upload(thumbBuf, `thumbs/${crypto.randomUUID()}-${stagingKey.split('/').pop()}`, mime);
+          thumbnailUrl = thumbRes.url;
+          finalKey = uploadRes.key;
+        }
+        // cleanup temp files
+        try { await fsPromises.unlink(optPath); } catch (_) {}
+        try { await fsPromises.unlink(thumbPath); } catch (_) {}
       } else if (mime.startsWith('video/')) {
-        // write buffer to temp, process with ffmpeg - convert/compress
-        const tmpDir = os.tmpdir();
-        const baseName = `${Date.now()}-${stagingKey.split('/').pop()}`;
-        const tempIn = path.join(tmpDir, baseName);
+        // process video files via temp files so ffmpeg works without buffering entire file
         const tempOut = path.join(tmpDir, `out-${baseName}.mp4`);
-        await fs.writeFile(tempIn, buffer);
         await new Promise<void>((resolve, reject) => {
           ffmpeg(tempIn).videoCodec('libx264').outputOptions(['-preset', 'fast']).save(tempOut).on('end', resolve).on('error', reject);
         });
-        const outBuf = await fs.readFile(tempOut);
-        const uploadRes = await this.storage.upload(outBuf, finalKey, 'video/mp4');
+
+        let uploadRes: any;
+        if (typeof (this.storage as any).uploadStream === 'function') {
+          const outStream = fs.createReadStream(tempOut);
+          uploadRes = await (this.storage as any).uploadStream(outStream, finalKey, 'video/mp4');
+        } else {
+          const outBuf = await fsPromises.readFile(tempOut);
+          uploadRes = await this.storage.upload(outBuf, finalKey, 'video/mp4');
+        }
+
         // thumbnail
         const thumbName = `thumb-${baseName}.jpg`;
         await new Promise<void>((resolve, reject) => {
@@ -74,22 +115,25 @@ export class MultimediaProcessor {
             .on('end', resolve)
             .on('error', reject);
         });
-        let thumbBuf: Buffer | undefined;
-        try { thumbBuf = await fs.readFile(path.join(tmpDir, thumbName)); const thumbRes = await this.storage.upload(thumbBuf, `thumbs/${Date.now()}-${stagingKey.split('/').pop()}`, 'image/jpeg'); thumbnailUrl = thumbRes.url; } catch (_) {}
+        try {
+          if (typeof (this.storage as any).uploadStream === 'function') {
+              const tstream = fs.createReadStream(path.join(tmpDir, thumbName));
+              const thumbRes = await (this.storage as any).uploadStream(tstream, `thumbs/${crypto.randomUUID()}-${stagingKey.split('/').pop()}`, 'image/jpeg');
+            thumbnailUrl = thumbRes.url;
+          } else {
+            const thumbBuf = await fsPromises.readFile(path.join(tmpDir, thumbName));
+            const thumbRes = await this.storage.upload(thumbBuf, `thumbs/${crypto.randomUUID()}-${stagingKey.split('/').pop()}`, 'image/jpeg');
+            thumbnailUrl = thumbRes.url;
+          }
+        } catch (_) {}
         metadata = { /* could probe for duration/size using ffprobe if needed */ };
-        try { await fs.unlink(tempIn); await fs.unlink(tempOut); await fs.unlink(path.join(tmpDir, thumbName)); } catch (_) {}
+        try { await fsPromises.unlink(tempIn); await fsPromises.unlink(tempOut); await fsPromises.unlink(path.join(tmpDir, thumbName)); } catch (_) {}
         finalKey = uploadRes.key;
       } else if (mime.startsWith('audio/')) {
-        // write buffer to temp, probe with ffprobe for duration/bitrate
-        const tmpDir = os.tmpdir();
-        const baseName = `${Date.now()}-${stagingKey.split('/').pop()}`;
-        const tempIn = path.join(tmpDir, baseName);
-        await fs.writeFile(tempIn, buffer);
+        // probe audio file and upload without buffering whole stream when possible
         let probe: any = undefined;
         try {
           probe = await new Promise<any>((resolve, reject) => {
-            // ffmpeg.ffprobe uses the configured ffprobe binary
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
             ffmpeg.ffprobe(tempIn, (err: any, data: any) => (err ? reject(err) : resolve(data)));
           });
         } catch (_) {
@@ -97,9 +141,15 @@ export class MultimediaProcessor {
         }
         const duration = probe?.format?.duration ? Number(probe.format.duration) : undefined;
         const bitrate = probe?.format?.bit_rate ? Number(probe.format.bit_rate) : undefined;
-        const uploadRes = await this.storage.upload(buffer, finalKey, mime);
+        let uploadRes;
+        if (typeof (this.storage as any).uploadStream === 'function') {
+          uploadRes = await (this.storage as any).uploadStream(fs.createReadStream(tempIn), finalKey, mime);
+        } else {
+          const buf = await fsPromises.readFile(tempIn);
+          uploadRes = await this.storage.upload(buf, finalKey, mime);
+        }
         metadata = { duration, bitrate };
-        try { await fs.unlink(tempIn); } catch (_) {}
+        try { await fsPromises.unlink(tempIn); } catch (_) {}
         finalKey = uploadRes.key;
       }
 
@@ -124,10 +174,23 @@ export class MultimediaProcessor {
 
       // delete staging
       try { await this.storage.delete(stagingKey); } catch (_) {}
+
     } catch (err) {
       await this.multimediaModel.findByIdAndUpdate(multimediaId, { status: 'failed' }).exec();
       throw err;
+    } finally {
+      // ensure temp files are cleaned even on unexpected errors
+      const candidates = [
+        tempIn,
+        path.join(tmpDir, `out-${baseName}.mp4`),
+        path.join(tmpDir, `opt-${baseName}`),
+        path.join(tmpDir, `thumb-${baseName}.jpg`),
+      ];
+      for (const p of candidates) {
+        try { await fsPromises.unlink(p); } catch (_) {}
+      }
     }
+    
   }
 }
 
