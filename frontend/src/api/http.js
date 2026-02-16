@@ -23,10 +23,9 @@ const resetPasswordApi = `${baseApi}/user/reset-password`;
 
 
 //endpoints de mensajes y multimedia
-
-
-
-
+const messagesApi = `${baseApi}/messages`
+const messagesUploadApi = `${baseApi}/messages/upload`
+const myMessagesApi = `${baseApi}/messages/me`
 
 
 
@@ -50,6 +49,9 @@ export {
     get,
     post,
     patch,
+    messagesApi,
+    messagesUploadApi,
+    myMessagesApi,
     loginApi,
     logoutApi,
     registerApi,
