@@ -19,7 +19,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Circle as CircleIcon,
   RssFeed as RssFeedIcon,
@@ -83,7 +83,7 @@ function DashboardContent() {
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { logoutUser } = useAuth();
-  const history = useHistory();
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -97,7 +97,7 @@ function DashboardContent() {
       logoutUser().catch(() => {});
       window.location.reload();
     } else if (actionKey === 'settings') {
-      history.push('/settings');
+      navigate('/settings');
     }
 
     setAnchorElUser(null);

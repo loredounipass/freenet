@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Switch } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthContext } from './hooks/AuthContext'
 import useFindUser from './hooks/useFindUser'
 
@@ -47,18 +47,19 @@ export default function App() {
                         >
                             <Toolbar />
                             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                                <Switch>
-                                    <PrivateRoute exact path='/' component={Home} />
-                                    <PrivateRoute exact path='/settings' component={Settings}/>
-                                    <PrivateRoute exact path='/verifyemail' component={EmailVerificationComponent}/>
-                                    <PublicRoute exact path='/login' component={Login} />
-                                    <PublicRoute exact path='/register' component={Register} />
-                                    <PublicRoute exact path='/forgot-password' component={ForgotPassword} />
-                                    <PublicRoute exact path='/reset-password' component={ResetPassword} />
-                                    <PublicRoute exact path='/verifytoken' component={VerifyToken} />
-                                    <PublicRoute exact path='/resendtoken' component={ResendTokenForm}/>
-                                </Switch>
-                                
+                                <Routes>
+                                    <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+                                    <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+                                    <Route path="/verifyemail" element={<PrivateRoute><EmailVerificationComponent /></PrivateRoute>} />
+
+                                    <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                                    <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+                                    <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+                                    <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+                                    <Route path="/verifytoken" element={<PublicRoute><VerifyToken /></PublicRoute>} />
+                                    <Route path="/resendtoken" element={<PublicRoute><ResendTokenForm /></PublicRoute>} />
+                                </Routes>
+
                             </Container>
                         </Box>
                     </Box>

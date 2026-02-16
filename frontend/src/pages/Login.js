@@ -17,12 +17,12 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import CircleIcon from '@mui/icons-material/Circle';
 
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useAuth from './../hooks/useAuth';
 
 export default function Login() {
   const { loginUser, error } = useAuth();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [password, setPassword] = useState('');
@@ -46,9 +46,9 @@ export default function Login() {
           responseMessage &&
           responseMessage.msg === 'Código de verificación enviado a tu correo electrónico.'
         ) {
-          history.push('/verifytoken');
+          navigate('/verifytoken');
         } else if (responseMessage && responseMessage.msg === 'Logged in!') {
-          history.push('/');
+          navigate('/');
         } else {
           setOpenSnackbar(true);
         }

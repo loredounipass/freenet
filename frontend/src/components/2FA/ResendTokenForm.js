@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Grid, Alert } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
 import useAuth from '../../hooks/useAuth'; 
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const ResendTokenForm = () => {
     const { resendToken, error, successMessage } = useAuth();
     const [email, setEmail] = useState('');
-    const history = useHistory();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (successMessage === 'Código de verificación reenviado a tu correo electrónico.') {
-            history.push('/verifytoken');
+            navigate('/verifytoken');
         }
-    }, [successMessage, history]);
+    }, [successMessage, navigate]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();

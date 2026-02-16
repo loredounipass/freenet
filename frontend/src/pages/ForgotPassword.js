@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import CircleIcon from '@mui/icons-material/Circle'
 import { post, forgotPasswordApi } from '../api/http'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -20,7 +20,7 @@ export default function ForgotPassword() {
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('error')
   const [loading, setLoading] = useState(false)
-  const history = useHistory()
+  const navigate = useNavigate()
   const isMounted = useRef(true)
 
   const submit = async (e) => {
@@ -32,7 +32,7 @@ export default function ForgotPassword() {
         setSnackbarSeverity('success')
         setSnackbarMessage('Si el correo existe, se ha enviado un mensaje con instrucciones.')
         setOpenSnackbar(true)
-        setTimeout(() => history.push('/login'), 1500)
+        setTimeout(() => navigate('/login'), 1500)
       }
     } catch (err) {
       if (isMounted.current) {

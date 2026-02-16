@@ -22,6 +22,15 @@ const resetPasswordApi = `${baseApi}/user/reset-password`;
 
 
 
+//endpoints de mensajes y multimedia
+
+
+
+
+
+
+
+
 async function get(url, body, config = {}) {
     return await axios.get(url, {
         params: body || {},

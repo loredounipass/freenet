@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Typography, Box, Button, TextField, Grid, Alert, CircularProgress } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 
 const VerifyToken = () => {
@@ -9,7 +9,7 @@ const VerifyToken = () => {
     const { verifyToken, error } = useAuth();
     const [loading, setLoading] = useState(false);
     const [localError, setLocalError] = useState(null); 
-    const history = useHistory();
+    const navigate = useNavigate();
     const isMounted = useRef(true);
 
     useEffect(() => {
@@ -36,7 +36,7 @@ const VerifyToken = () => {
             try {
                 const response = await verifyToken({ email: storedEmail, ...formValues });
                 if (isMounted.current && response?.msg === 'Logged in!') {
-                    history.push('/');
+                    navigate('/');
                 }
             } catch (err) {
             } finally {
@@ -46,7 +46,7 @@ const VerifyToken = () => {
     };
 
     const handleResend = () => {
-        history.push('/resendtoken');
+        navigate('/resendtoken');
     };
 
     return (

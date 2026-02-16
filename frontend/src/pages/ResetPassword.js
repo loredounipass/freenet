@@ -16,7 +16,7 @@ import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import CircleIcon from '@mui/icons-material/Circle'
 import { post, resetPasswordApi } from '../api/http'
-import { useLocation, useHistory } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 function useQuery() {
   const { search } = useLocation()
@@ -25,7 +25,7 @@ function useQuery() {
 
 export default function ResetPassword() {
   const query = useQuery()
-  const history = useHistory()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -67,7 +67,7 @@ export default function ResetPassword() {
         setSnackbarSeverity('success')
         setSnackbarMessage(res?.data?.message || 'Contraseña restablecida con éxito')
         setOpenSnackbar(true)
-        setTimeout(() => history.push('/login'), 1500)
+        setTimeout(() => navigate('/login'), 1500)
       }
     } catch (err) {
       if (isMounted.current) {
