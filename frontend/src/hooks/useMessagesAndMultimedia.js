@@ -12,15 +12,16 @@ import { AuthContext } from './AuthContext';
  *  - 'messageSent' : acknowledgement delivered to sender sockets
  */
 export default function useMessagesAndMultimedia() {
-	const { auth } = useContext(AuthContext) || {};
+	const { auth } = useContext(AuthContext);
 	const [messages, setMessages] = useState([]);
 	const [connected, setConnected] = useState(false);
 	const [error, setError] = useState(null);
 	const socketRef = useRef(null);
 
 	useEffect(() => {
-		// connect to the backend namespace for messages
-		const socket = io('http://localhost:4000/messages', {
+		// connect to the backend namespace for messages (env var only)
+		const socketBase = (process.env.REACT_APP_SOCKET_URL).replace(/\/$/, '');
+		const socket = io(`${socketBase}/messages`, {
 			withCredentials: true,
 			autoConnect: true,
 			transports: ['websocket', 'polling'],
