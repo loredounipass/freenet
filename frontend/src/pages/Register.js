@@ -26,8 +26,6 @@ export default function Register() {
     }
   };
 
-  const handleCloseSnackbar = () => setOpenSnackbar(false);
-
   React.useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';

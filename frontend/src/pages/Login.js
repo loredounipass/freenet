@@ -42,7 +42,6 @@ export default function Login() {
     }
   };
 
-  const handleCloseSnackbar = () => setOpenSnackbar(false);
 
   useEffect(() => {
     return () => {
