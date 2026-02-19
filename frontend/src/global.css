@@ -71,6 +71,24 @@ a {
   box-shadow: none;
 }
 
+/* Slight upward offset so the auth card sits a bit above exact center */
+.auth-card {
+  transform: translateY(-6vh);
+  transition: transform 200ms ease;
+}
+
+@media (max-width: 640px) {
+  .auth-wrapper {
+    padding: 1.25rem 1rem;
+    min-height: calc(100vh - 100px);
+  }
+  .auth-card { transform: translateY(-3vh); }
+}
+
+@media (max-width: 400px) {
+  .auth-card { transform: translateY(-1.5vh); }
+}
+
 .auth-logo {
   display: flex;
   flex-direction: column;
