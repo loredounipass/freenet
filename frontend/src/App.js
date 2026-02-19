@@ -17,6 +17,8 @@ import ResendTokenForm from './components/2FA/ResendTokenForm'
 import EmailVerificationComponent from './components/settings/verify'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import ConversationList from './components/chat/ConversationList'
+import ChatView from './components/chat/ChatView'
 import { LanguageProvider } from './hooks/LanguageContext';
 import './i18n'; 
 
@@ -36,21 +38,20 @@ export default function App() {
                         <Box
                             component="main"
                             sx={{
-                                backgroundColor: (theme) =>
-                                    theme.palette.mode === 'light'
-                                        ? theme.palette.grey[100]
-                                        : theme.palette.grey[900],
+                                backgroundColor: 'transparent',
                                 flexGrow: 1,
                                 height: '100vh',
                                 overflow: 'auto',
                             }}
                         >
                             <Toolbar />
-                            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+                            <Container maxWidth="lg" sx={{ mt: 4, mb: 4, position: 'relative' }}>
                                 <Routes>
                                     <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
                                     <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
                                     <Route path="/verifyemail" element={<PrivateRoute><EmailVerificationComponent /></PrivateRoute>} />
+                                    <Route path="/chat" element={<PrivateRoute><ConversationList /></PrivateRoute>} />
+                                    <Route path="/chat/:userId" element={<PrivateRoute><ChatView /></PrivateRoute>} />
 
                                     <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                                     <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />

@@ -14,8 +14,8 @@ import {
     updateUserProfileApi,
     sendVerificationEmailApi,
     verifyEmailApi,
-    isEmailVerifiedApi
-    
+    isEmailVerifiedApi,
+    searchUsersApi,
 } from '../api/http';
 
 export default class User {
@@ -70,5 +70,8 @@ export default class User {
     static async isEmailVerified(body) {
         return await get(isEmailVerifiedApi, body);
     }
-    
+
+    static async searchUsers(query) {
+        return await get(searchUsersApi, { q: query });
+    }
 }

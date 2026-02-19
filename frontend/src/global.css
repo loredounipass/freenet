@@ -1,0 +1,144 @@
+/* Global CSS: base resets and app-wide styles */
+
+/* Box sizing and layout reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  background: #0b0f13 !important;
+}
+
+/* App background, font smoothing and defaults */
+body {
+  margin: 0;
+  background: #0b0f13 !important; /* dark background matching design */
+  color: #e6eef5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure common MUI surface components are transparent so body shows through */
+.MuiPaper-root, .MuiContainer-root, .MuiBox-root, .MuiAppBar-root {
+  background: transparent !important;
+}
+
+/* Form elements inherit font and remove native outlines where appropriate */
+input, button, textarea, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Links */
+a {
+  color: inherit;
+}
+
+/* Small helpers to match the look in the mockups */
+.freenet-logo-placeholder {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg,#22c1c3,#1e90ff);
+  color: #04111a;
+  font-weight: 700;
+}
+
+.card-bg {
+  background: linear-gradient(180deg,#071019 0%, #0b1114 100%);
+}
+
+/* Authentication form styles (global, used instead of Tailwind) */
+.auth-wrapper {
+  min-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: transparent !important;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.auth-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.auth-title {
+  color: #e6eef5;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.form-group { margin-bottom: 0.75rem; }
+
+.form-label { color: #b7c8d6; font-size: 0.875rem; margin-bottom: 0.35rem; display:block }
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.02);
+  color: #e6eef5;
+  font-size: 0.95rem;
+}
+
+.form-input::placeholder { color: #6f8a96; }
+
+/* Password input wrapper so the toggle sits inside the input */
+.password-wrapper { position: relative; }
+.password-wrapper .form-input { padding-right: 3.75rem; }
+.password-wrapper .password-toggle {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #000;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-weight: 600;
+}
+
+/* Confirm password toggle should be white */
+.password-toggle.confirm-toggle { color: #fff; }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(90deg,#22c1c3,#1e90ff);
+  color: #04111a;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(30,144,255,0.12);
+}
+
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed }
+
+.muted-link { color: #9fb7c3; font-size: 0.9rem; }
+.muted-link a { color: #66d0e0; text-decoration: none }
+
+.error-note { margin-top: 0.5rem; color: #ff7b7b; font-size: 0.875rem }
+

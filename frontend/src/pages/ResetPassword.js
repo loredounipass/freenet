@@ -1,20 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import {
-  Typography,
-  Box,
-  Button,
-  TextField,
-  Grid,
-  Link,
-  Snackbar,
-  Alert,
-  IconButton,
-  InputAdornment,
-  CircularProgress,
-} from '@mui/material'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import CircleIcon from '@mui/icons-material/Circle'
 import { post, resetPasswordApi } from '../api/http'
 import { useLocation, useNavigate } from 'react-router-dom'
 
@@ -80,198 +64,91 @@ export default function ResetPassword() {
     }
   }
 
-  const handleCloseSnackbar = () => setOpenSnackbar(false)
-
   return (
-    <Box
-      sx={{
-        minHeight: 'calc(100vh - 140px)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-      }}
-    >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: '480px',
-          mt: 0,
-          px: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Box component="form" onSubmit={submit} noValidate sx={{ width: '100%', mt: 0 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              mb: 2,
-            }}
-          >
-            <Box
-              sx={{
-                width: 45,
-                height: 45,
-                borderRadius: '50%',
-                bgcolor: '#2186EB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
-            </Box>
+    <div className="auth-wrapper">
+      <div className="auth-card card-bg">
+        <form onSubmit={submit} noValidate>
+          <div className="auth-logo">
+            <div className="freenet-logo-placeholder">F</div>
+            <div className="auth-title">Crear nueva contraseña</div>
+          </div>
 
-            <Typography component="h1" variant="h5" sx={{ fontWeight: 502 }}>
-              Crear nueva contraseña
-            </Typography>
-          </Box>
+          <div className="form-group">
+            <label className="form-label">Correo electrónico</label>
+            <input
+              name="email"
+              type="email"
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Correo electrónico"
+            />
+          </div>
 
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Correo electrónico"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            InputProps={{
-              sx: {
-                borderRadius: 2,
-                border: '1px solid #ddd',
-              },
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="newPassword"
-            label="Nueva contraseña"
-            type={showPassword ? 'text' : 'password'}
-            id="newPassword"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-              sx: {
-                borderRadius: 2,
-                border: '1px solid #ddd',
-              },
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="confirmNewPassword"
-            label="Confirmar contraseña"
-            type={showConfirmPassword ? 'text' : 'password'}
-            id="confirmNewPassword"
-            value={confirmNewPassword}
-            onChange={(e) => setConfirmNewPassword(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-              sx: {
-                borderRadius: 2,
-                border: '1px solid #ddd',
-              },
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{
-              mt: 3,
-              mb: 2,
-              color: 'white',
-              bgcolor: '#326DEB',
-              '&:hover': {
-                bgcolor: '#326DEB',
-              },
-            }}
-            disabled={loading}
-          >
-            {loading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={20} sx={{ color: '#074EE7FF' }} />
-                <Typography sx={{ ml: 1, color: '#074EE7FF', fontSize: '0.875rem' }}>
-                  Restableciendo...
-                </Typography>
-              </Box>
-            ) : (
-              'Restablecer contraseña'
-            )}
-          </Button>
-
-          <Grid container direction="column" alignItems="center">
-            <Grid item>
-              <Link
-                href="/login"
-                variant="body2"
-                sx={{
-                  mt: 2,
-                  fontSize: '0.875rem',
-                  color: '#326DEB',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    color: '#1E5BB5',
-                  },
-                }}
+          <div className="form-group">
+            <label className="form-label">Nueva contraseña</label>
+            <div className="password-wrapper">
+              <input
+                name="newPassword"
+                type={showPassword ? 'text' : 'password'}
+                required
+                className="form-input"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nueva contraseña"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                Volver al inicio de sesión
-              </Link>
-            </Grid>
-          </Grid>
-        </Box>
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
 
-        <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-            {snackbarMessage}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Box>
+          <div className="form-group">
+            <label className="form-label">Confirmar contraseña</label>
+            <div className="password-wrapper">
+              <input
+                name="confirmNewPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                className="form-input"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Confirmar contraseña"
+              />
+              <button
+                type="button"
+                className="password-toggle confirm-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Restableciendo...' : 'Restablecer contraseña'}
+            </button>
+          </div>
+
+          <div className="muted-link" style={{ textAlign: 'center' }}>
+            <a href="/login">Volver al inicio de sesión</a>
+          </div>
+
+          {openSnackbar && (
+            <div
+              className="error-note"
+              style={{ color: snackbarSeverity === 'success' ? '#7fffd4' : '#ff7b7b' }}
+            >
+              {snackbarMessage}
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   )
 }

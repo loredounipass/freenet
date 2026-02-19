@@ -1,22 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Typography,
-  Box,
-  Button,
-  TextField,
-  Grid,
-  Link,
-  Snackbar,
-  Alert,
-  IconButton,
-  InputAdornment,
-  CircularProgress,
-} from '@mui/material';
-
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import CircleIcon from '@mui/icons-material/Circle';
-
 import { useNavigate } from 'react-router-dom';
 import useAuth from './../hooks/useAuth';
 
@@ -69,193 +51,51 @@ export default function Login() {
   }, []);
 
   return (
-    <Box
-      sx={{
-        minHeight: 'calc(100vh - 140px)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-      }}
-    >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: '480px',
-          mt: 0,
-          px: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        {/* CAMBIO: el logo ahora va DENTRO del form para quedar centrado en el formulario */}
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%', mt: 0 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              mb: 2,
-            }}
-          >
-            <Box
-              sx={{
-                width: 45,
-                height: 45,
-                borderRadius: '50%',
-                bgcolor: '#2186EB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
-            </Box>
+    <div className="auth-wrapper">
+      <div className="auth-card card-bg">
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="auth-logo">
+            <div className="freenet-logo-placeholder">F</div>
+            <div className="auth-title">FREENET</div>
+          </div>
 
-            <Typography component="h1" variant="h5" sx={{ fontWeight: 502 }}>
-              Login now
-            </Typography>
-          </Box>
+          <div className="form-group">
+            <label className="form-label">Email or Username</label>
+            <input name="email" type="text" required autoComplete="email" autoFocus className="form-input" placeholder="Email or Username" />
+          </div>
 
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Correo electrónico"
-            name="email"
-            autoComplete="email"
-            autoFocus
-            error={!!error}
-            helperText={error ? error : ''}
-            InputProps={{
-              sx: {
-                borderRadius: 2,
-                border: '1px solid #ddd',
-              },
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div className="password-wrapper">
+              <input
+                name="password"
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-input"
+                placeholder="Password"
+                autoComplete="current-password"
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle">{showPassword ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
 
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Contraseña"
-            type={showPassword ? 'text' : 'password'}
-            id="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={!!error}
-            helperText={error ? error : ''}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-              sx: {
-                borderRadius: 2,
-                border: '1px solid #ddd',
-              },
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
+          <div className="form-group">
+            <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Signing in...' : 'Login'}</button>
+          </div>
 
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{
-              mt: 3,
-              mb: 2,
-              color: 'white',
-              bgcolor: '#326DEB',
-              '&:hover': {
-                bgcolor: '#326DEB',
-              },
-            }}
-            disabled={loading}
-          >
-            {loading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={20} sx={{ color: '#074EE7FF' }} />
-                <Typography sx={{ ml: 1, color: '#074EE7FF', fontSize: '0.875rem' }}>
-                  Iniciando sesión...
-                </Typography>
-              </Box>
-            ) : (
-              'Iniciar sesión'
-            )}
-          </Button>
+          <div className="muted-link" style={{textAlign: 'center'}}>
+            <div><a href="/forgot-password">Forgot Password?</a></div>
+            <div style={{marginTop:'6px'}}>Don't have an account? <a href="/register">Sign Up</a></div>
+          </div>
 
-          <Grid container direction="column" alignItems="center">
-            <Grid item>
-              <Link
-                href="/register"
-                variant="body2"
-                sx={{
-                  mt: 2,
-                  fontSize: '0.9rem',
-                  color: '#1E5BB5',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  textTransform: 'none',
-                  letterSpacing: '0.2px',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    color: '#163f7a',
-                  },
-                }}
-              >
-                ¿Aún no tienes cuenta? Regístrate
-              </Link>
-            </Grid>
-
-            <Grid item>
-              <Link
-                href="/forgot-password"
-                variant="body2"
-                sx={{
-                  mt: 1,
-                  fontSize: '0.9rem',
-                  color: '#1E5BB5',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  textTransform: 'none',
-                  letterSpacing: '0.2px',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    color: '#163f7a',
-                  },
-                }}
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
-            {error || 'Ha ocurrido un error al iniciar sesión.'}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Box>
+          {openSnackbar && (
+            <div className="error-note">{error || 'Ha ocurrido un error al iniciar sesión.'}</div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import axios from 'axios'
 axios.defaults.withCredentials = true
 
-const baseApi = 'https://9rwc5lt0-4000.use2.devtunnels.ms/secure/api'
+const baseApi = 'http://localhost:4000/secure/api'
 
 // Endpoints usuario
 const loginApi = `${baseApi}/user/login`
@@ -26,6 +26,9 @@ const resetPasswordApi = `${baseApi}/user/reset-password`;
 const messagesApi = `${baseApi}/messages`
 const messagesUploadApi = `${baseApi}/messages/upload`
 const myMessagesApi = `${baseApi}/messages/me`
+
+// endpoints de búsqueda de usuarios
+const searchUsersApi = `${baseApi}/user/search`
 
 
 
@@ -52,6 +55,7 @@ export {
     messagesApi,
     messagesUploadApi,
     myMessagesApi,
+    searchUsersApi,
     loginApi,
     logoutApi,
     registerApi,

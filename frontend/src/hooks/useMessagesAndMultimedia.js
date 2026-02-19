@@ -19,8 +19,10 @@ export default function useMessagesAndMultimedia() {
 	const socketRef = useRef(null);
 
 	useEffect(() => {
-		// connect to the backend namespace for messages (env var only)
-		const socketBase = (process.env.REACT_APP_SOCKET_URL).replace(/\/$/, '');
+		// connect to the backend namespace for messages (env var preferred)
+		// Fall back to `window.location.origin` if env var is not set to avoid calling `.replace` on undefined.
+		const rawSocketUrl = process.env.REACT_APP_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+		const socketBase = String(rawSocketUrl).replace(/\/$/, '');
 		const socket = io(`${socketBase}/messages`, {
 			withCredentials: true,
 			autoConnect: true,

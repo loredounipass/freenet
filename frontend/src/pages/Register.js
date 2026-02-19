@@ -1,19 +1,4 @@
 import React from 'react';
-import CircleIcon from '@mui/icons-material/Circle';
-import {
-  Typography,
-  Box,
-  Button,
-  TextField,
-  Grid,
-  Link,
-  Snackbar,
-  Alert,
-  IconButton,
-  InputAdornment,
-} from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import useAuth from './../hooks/useAuth';
 
 export default function Register() {
@@ -52,212 +37,64 @@ export default function Register() {
   }, []);
 
   return (
-    <Box
-      sx={{
-        minHeight: 'calc(100vh - 140px)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-start', // CAMBIO: pega el contenido arriba
-        alignItems: 'center',
-        width: '100%',
-        overflowY: 'hidden',
-        pt: 0, // CAMBIO: sin padding-top para que suba
-      }}
-    >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: '480px',
-          px: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          mt: 0, // CAMBIO: sin margen arriba
-        }}
-      >
-        {/* CAMBIO: logo centrado DENTRO del form */}
-        <Box sx={{ width: '100%', mt: 0 }} component="form" noValidate onSubmit={handleSubmit}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              mb: 2,
-            }}
-          >
-            <Box
-              sx={{
-                width: 45,
-                height: 45,
-                borderRadius: '50%',
-                bgcolor: '#2186EB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
-            </Box>
+    <div className="auth-wrapper">
+      <div className="auth-card card-bg">
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="auth-logo">
+            <div className="freenet-logo-placeholder">F</div>
+            <div className="auth-title">Join Freenet</div>
+          </div>
 
-            <Typography component="h1" variant="h5" sx={{ fontWeight: 502 }}>
-              Register now
-            </Typography>
-          </Box>
+          <div className="form-group">
+            <label className="form-label">First Name</label>
+            <input name="firstName" required className="form-input" placeholder="First Name" />
+          </div>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                autoComplete="given-name"
-                name="firstName"
-                required
-                fullWidth
-                id="firstName"
-                label="Nombre"
-                autoFocus
-                error={!!error}
-                helperText={error ? error : ''}
-                InputProps={{
-                  sx: { borderRadius: 2, border: '1px solid #ddd' },
-                }}
-              />
-            </Grid>
+          <div className="form-group">
+            <label className="form-label">Last Name</label>
+            <input name="lastName" required className="form-input" placeholder="Last Name" />
+          </div>
 
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                id="lastName"
-                label="Apellidos"
-                name="lastName"
-                autoComplete="family-name"
-                error={!!error}
-                helperText={error ? error : ''}
-                InputProps={{
-                  sx: { borderRadius: 2, border: '1px solid #ddd' },
-                }}
-              />
-            </Grid>
+          <div className="form-group">
+            <label className="form-label">Email Address</label>
+            <input name="email" type="email" required className="form-input" placeholder="Email Address" />
+          </div>
 
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                id="email"
-                label="Correo electrónico"
-                name="email"
-                autoComplete="email"
-                error={!!error}
-                helperText={error ? error : ''}
-                InputProps={{
-                  sx: { borderRadius: 2, border: '1px solid #ddd' },
-                }}
-              />
-            </Grid>
+          <div className="form-group">
+            <label className="form-label">Username</label>
+            <input name="username" required className="form-input" placeholder="Username" />
+          </div>
 
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="password"
-                label="Contraseña"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={!!error}
-                helperText={error ? error : ''}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                  sx: { borderRadius: 2, border: '1px solid #ddd' },
-                }}
-              />
-            </Grid>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div className="password-wrapper">
+              <input name="password" type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} className="form-input" placeholder="Password" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle">{showPassword ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
 
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                name="confirmPassword"
-                label="Confirmar contraseña"
-                type={showConfirmPassword ? 'text' : 'password'}
-                id="confirmPassword"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                error={password !== confirmPassword}
-                helperText={password !== confirmPassword ? 'Las contraseñas no coinciden' : ''}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle confirm password visibility"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                  sx: { borderRadius: 2, border: '1px solid #ddd' },
-                }}
-              />
-            </Grid>
-          </Grid>
+          <div className="form-group">
+            <label className="form-label">Confirm Password</label>
+            <div className="password-wrapper">
+              <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="form-input" placeholder="Confirm Password" />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="password-toggle confirm-toggle">{showConfirmPassword ? 'Hide' : 'Show'}</button>
+            </div>
+            {password !== confirmPassword && <div className="error-note">Las contraseñas no coinciden</div>}
+          </div>
 
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{
-              mt: 3,
-              mb: 2,
-              color: 'white',
-              bgcolor: '#326DEB',
-              '&:hover': { bgcolor: '#326DEB' },
-            }}
-          >
-            Registrarse
-          </Button>
+          <div className="form-group">
+            <button type="submit" className="btn-primary">Create Account</button>
+          </div>
 
-          <Grid container justifyContent="center">
-            <Grid item>
-              <Link
-                href="/login"
-                variant="body2"
-                sx={{
-                  mt: 2,
-                  fontSize: '0.875rem',
-                  color: '#326DEB',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    color: '#1E5BB5',
-                  },
-                }}
-              >
-                ¿Ya tienes una cuenta? Inicia sesión
-              </Link>
-            </Grid>
-          </Grid>
-        </Box>
+          <div className="muted-link" style={{textAlign:'center'}}>
+            <a href="/login">Already have an account? <strong>Log In</strong></a>
+          </div>
 
-        <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
-            {error || 'Ha ocurrido un error al registrarse.'}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Box>
+          {openSnackbar && (
+            <div className="error-note">{error || 'Ha ocurrido un error al registrarse.'}</div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }

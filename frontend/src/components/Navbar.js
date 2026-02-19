@@ -91,17 +91,21 @@ function DashboardContent() {
   const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
 
   const handleClickUserMenu = async (actionKey) => {
+    // close menus immediately for clean UI
+    setAnchorElUser(null);
+    setDrawerOpen(false);
+
     if (actionKey === 'logout') {
+      try {
+        await logoutUser();
+      } catch (err) {
+        // ignore logout errors, still clear client state
+      }
       setAuth(null);
-      // Trigger server logout but don't wait for it — reload immediately for instant UX
-      logoutUser().catch(() => {});
-      window.location.reload();
+      navigate('/login');
     } else if (actionKey === 'settings') {
       navigate('/settings');
     }
-
-    setAnchorElUser(null);
-    setDrawerOpen(false);
   };
 
   const getAvatarColor = (name) => {

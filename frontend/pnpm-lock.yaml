@@ -77,6 +77,9 @@ importers:
       socket.io-client:
         specifier: ^4.8.3
         version: 4.8.3
+      tailwindcss:
+        specifier: ^3.4.7
+        version: 3.4.19
     devDependencies:
       '@babel/core':
         specifier: ^7.22.10
@@ -96,9 +99,6 @@ importers:
       postcss:
         specifier: 8.4.31
         version: 8.4.31
-      tailwindcss:
-        specifier: ^3.4.7
-        version: 3.4.19
 
 packages:
 

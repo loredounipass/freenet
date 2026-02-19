@@ -235,4 +235,23 @@ async sendVerificationEmail(email: string): Promise<boolean> {
 
     return result;
   }
+
+  // Search users by query -- supports partial name/email and exact ObjectId
+  async searchUsers(q: string) {
+    if (!q) return [];
+    const regex = new RegExp(q, 'i');
+    const or: any[] = [
+      { email: regex },
+      { firstName: regex },
+      { lastName: regex },
+    ];
+
+    // If q looks like a Mongo ObjectId, include exact _id match
+    if (/^[0-9a-fA-F]{24}$/.test(q)) {
+      or.push({ _id: q });
+    }
+
+    const users = await this.userModel.find({ $or: or }).limit(20).select('-password').exec();
+    return users;
+  }
 }

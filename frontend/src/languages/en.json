@@ -39,5 +39,33 @@
     "no_conversations": "No conversations yet",
     "start_chat": "Start Chat",
     "coming_soon": "Coming Soon"
+  },
+
+  "chat": {
+    "title": "Messages",
+    "search_placeholder": "Search conversations...",
+    "no_conversations": "You don't have any conversations yet",
+    "start_new": "Start a new conversation",
+    "new_chat": "New conversation",
+    "search_users": "Search users...",
+    "no_users_found": "No users found",
+    "type_message": "Type a message...",
+    "send": "Send",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "online": "Online",
+    "offline": "Offline",
+    "you": "You",
+    "photo": "Photo",
+    "video": "Video",
+    "audio": "Audio",
+    "file": "File",
+    "back": "Back",
+    "no_messages": "No messages yet. Send the first one!",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "cancel": "Cancel",
+    "close": "Close"
   }
 }

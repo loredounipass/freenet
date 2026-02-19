@@ -1,16 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react'
-import {
-  Typography,
-  Box,
-  Button,
-  TextField,
-  Grid,
-  Link,
-  Snackbar,
-  Alert,
-  CircularProgress,
-} from '@mui/material'
-import CircleIcon from '@mui/icons-material/Circle'
 import { post, forgotPasswordApi } from '../api/http'
 import { useNavigate } from 'react-router-dom'
 
@@ -45,8 +33,6 @@ export default function ForgotPassword() {
     }
   }
 
-  const handleCloseSnackbar = () => setOpenSnackbar(false)
-
   useEffect(() => {
     return () => {
       isMounted.current = false
@@ -54,134 +40,48 @@ export default function ForgotPassword() {
   }, [])
 
   return (
-    <Box
-      sx={{
-        minHeight: 'calc(100vh - 140px)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-      }}
-    >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: '480px',
-          mt: 0,
-          px: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Box component="form" onSubmit={submit} noValidate sx={{ width: '100%', mt: 0 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              mb: 2,
-            }}
-          >
-            <Box
-              sx={{
-                width: 45,
-                height: 45,
-                borderRadius: '50%',
-                bgcolor: '#2186EB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+    <div className="auth-wrapper">
+      <div className="auth-card card-bg">
+        <form onSubmit={submit} noValidate>
+          <div className="auth-logo">
+            <div className="freenet-logo-placeholder">F</div>
+            <div className="auth-title">Restablecer contraseña</div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Correo electrónico</label>
+            <input
+              name="email"
+              type="email"
+              required
+              className="form-input"
+              placeholder="Correo electrónico"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Enviando...' : 'Enviar enlace de restablecimiento'}
+            </button>
+          </div>
+
+          <div className="muted-link" style={{ textAlign: 'center' }}>
+            <a href="/login">Volver al inicio de sesión</a>
+          </div>
+
+          {openSnackbar && (
+            <div
+              className="error-note"
+              style={{ color: snackbarSeverity === 'success' ? '#7fffd4' : '#ff7b7b' }}
             >
-              <CircleIcon sx={{ color: 'white', fontSize: 18 }} />
-            </Box>
-
-            <Typography component="h1" variant="h5" sx={{ fontWeight: 502 }}>
-              Restablecer contraseña
-            </Typography>
-          </Box>
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Correo electrónico"
-            name="email"
-            autoComplete="email"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            InputProps={{
-              sx: {
-                borderRadius: 2,
-                border: '1px solid #ddd',
-              },
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{
-              mt: 3,
-              mb: 2,
-              color: 'white',
-              bgcolor: '#326DEB',
-              '&:hover': {
-                bgcolor: '#326DEB',
-              },
-            }}
-            disabled={loading}
-          >
-            {loading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={20} sx={{ color: '#074EE7FF' }} />
-                <Typography sx={{ ml: 1, color: '#074EE7FF', fontSize: '0.875rem' }}>
-                  Enviando...
-                </Typography>
-              </Box>
-            ) : (
-              'Enviar enlace de restablecimiento'
-            )}
-          </Button>
-
-          <Grid container direction="column" alignItems="center">
-            <Grid item>
-              <Link
-                href="/login"
-                variant="body2"
-                sx={{
-                  mt: 2,
-                  fontSize: '0.875rem',
-                  color: '#326DEB',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    color: '#1E5BB5',
-                  },
-                }}
-              >
-                Volver al inicio de sesión
-              </Link>
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-            {snackbarMessage}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Box>
+              {snackbarMessage}
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   )
 }
