@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, CircularProgress } from '@mui/material';
 import { AuthContext } from '../../hooks/AuthContext';
 import useMessagesAndMultimedia from '../../hooks/useMessagesAndMultimedia';
 import { useTranslation } from 'react-i18next';
@@ -82,13 +81,29 @@ export default function ChatView() {
   const groupedItems = groupMessagesByDate(chatMessages, t);
 
   // Scroll to bottom when messages change
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    try {
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    } catch (_) {
+      // fallback: set scrollTop directly
+      const container = document.querySelector('.chat-messages');
+      if (container) container.scrollTop = container.scrollHeight;
+    }
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom('smooth');
   }, [chatMessages.length, scrollToBottom]);
+
+  // Ensure we scroll to bottom when loading finishes (initial load / open chat)
+  useEffect(() => {
+    if (!loading) {
+      // allow DOM to finish rendering grouped items
+      const t = setTimeout(() => scrollToBottom('auto'), 50);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [loading, scrollToBottom]);
 
   // Fetch other user info and messages on mount
   useEffect(() => {
@@ -167,91 +182,30 @@ export default function ChatView() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: 'calc(100vh - 120px)',
-        }}
-      >
-        <CircularProgress sx={{ color: '#2186EB' }} />
-      </Box>
+      <div className="chat-loading" style={{ height: 'calc(100vh - 120px)' }}>
+        <div className="spinner" />
+      </div>
     );
   }
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 120px)',
-        bgcolor: '#fff',
-        borderRadius: 3,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-      }}
-    >
-      {/* Header */}
+    <div className="chat-view">
       <ChatHeader user={otherUser} connected={connected} />
 
-      {/* Messages area */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-          py: 2,
-          bgcolor: '#FAFAFA',
-          '&::-webkit-scrollbar': { width: 6 },
-          '&::-webkit-scrollbar-thumb': {
-            bgcolor: '#CCC',
-            borderRadius: 3,
-          },
-        }}
-      >
+      <div className="chat-messages">
         {chatMessages.length === 0 ? (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-            }}
-          >
-            <Typography variant="body2" sx={{ color: '#9E9E9E', textAlign: 'center' }}>
-              {t('chat.no_messages')}
-            </Typography>
-          </Box>
+          <div className="no-messages">
+            <div className="no-messages-text">{t('chat.no_messages')}</div>
+          </div>
         ) : (
           groupedItems.map((item, index) => {
-            if (item.type === 'date') {
-              return (
-                <Box
-                  key={item.key}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    my: 1.5,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      bgcolor: 'rgba(0,0,0,0.06)',
-                      borderRadius: 3,
-                      px: 2,
-                      py: 0.5,
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{ color: '#666', fontSize: '0.75rem', fontWeight: 500 }}
-                    >
-                      {item.label}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
-            }
+              if (item.type === 'date') {
+                return (
+                  <div key={item.key} className="date-separator">
+                    <div className="date-pill">{item.label}</div>
+                  </div>
+                );
+              }
 
             const msg = item.data;
             const isOwn = msg.sender === currentUserId;
@@ -263,25 +217,15 @@ export default function ChatView() {
               prevItem.type === 'date' ||
               prevItem.data?.sender !== msg.sender;
 
-            return (
-              <MessageBubble
-                key={item.key}
-                message={msg}
-                isOwn={isOwn}
-                showTail={showTail}
-              />
-            );
+              return (
+                <MessageBubble key={item.key} message={msg} isOwn={isOwn} showTail={showTail} />
+              );
           })
         )}
         <div ref={messagesEndRef} />
-      </Box>
+      </div>
 
-      {/* Input */}
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        onSendFile={handleSendFile}
-        disabled={!connected}
-      />
-    </Box>
+      <ChatInput onSendMessage={handleSendMessage} onSendFile={handleSendFile} disabled={!connected} />
+    </div>
   );
 }

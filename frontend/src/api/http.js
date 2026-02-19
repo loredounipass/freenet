@@ -3,6 +3,12 @@ axios.defaults.withCredentials = true
 
 const baseApi = 'http://localhost:4000/secure/api'
 
+// Base origin for non-API assets (media). Derived from baseApi origin.
+const apiOrigin = (() => {
+    try { return new URL(baseApi).origin; } catch (_) { return 'http://localhost:4000'; }
+})();
+const mediaBase = `${apiOrigin}/uploads`;
+
 // Endpoints usuario
 const loginApi = `${baseApi}/user/login`
 const logoutApi = `${baseApi}/user/logout`
@@ -71,4 +77,6 @@ export {
     isEmailVerifiedApi,
     forgotPasswordApi,
     resetPasswordApi,
+    apiOrigin,
+    mediaBase,
 };

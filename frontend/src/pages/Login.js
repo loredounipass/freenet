@@ -88,7 +88,9 @@ export default function Login() {
 
           <div className="muted-link" style={{textAlign: 'center'}}>
             <div><a href="/forgot-password">Forgot Password?</a></div>
-            <div style={{marginTop:'6px'}}>Don't have an account? <a href="/register">Sign Up</a></div>
+            <div style={{marginTop:'6px'}}>
+              <a href="/register" className="signup-button">Don't have an account? <span className="signup-cta">Sign Up</span></a>
+            </div>
           </div>
 
           {openSnackbar && (

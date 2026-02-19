@@ -278,21 +278,28 @@ export class MultimediaProcessor {
         finalKey = uploadRes.key;
       }
 
-      // update multimedia doc
+      // Compute public URL and encoded variant for safe storage/clients
+      const publicUrl = this.storage.getPublicUrl(finalKey);
+      const encodedUrl = publicUrl.split('/').map(s => encodeURIComponent(s)).join('/');
+      const encodedThumbnail = thumbnailUrl ? thumbnailUrl.split('/').map(s => encodeURIComponent(s)).join('/') : undefined;
+
+      // update multimedia doc with encoded URLs so DB always contains safe paths
       await this.multimediaModel.findByIdAndUpdate(multimediaId, {
-        url: this.storage.getPublicUrl(finalKey),
-        thumbnailUrl,
+        url: encodedUrl,
+        thumbnailUrl: encodedThumbnail,
         status: 'ready',
         ...metadata,
       }).exec();
 
       // emit event so realtime clients can update (thumbnail, url, metadata)
       try {
+        // log for debugging so dev can confirm the final public URL
+        try { console.log(`[MultimediaProcessor] multimedia.ready url=${publicUrl} encoded=${encodedUrl} messageId=${job.data.messageId}`); } catch (_) {}
         this.eventEmitter.emit('multimedia.ready', {
           multimediaId: multimediaId,
           messageId: job.data.messageId,
-          url: this.storage.getPublicUrl(finalKey),
-          thumbnailUrl,
+          url: encodedUrl,
+          thumbnailUrl: encodedThumbnail,
           metadata,
         });
       } catch (_) {}

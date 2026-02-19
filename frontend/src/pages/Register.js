@@ -87,7 +87,7 @@ export default function Register() {
           </div>
 
           <div className="muted-link" style={{textAlign:'center'}}>
-            <a href="/login">Already have an account? <strong>Log In</strong></a>
+            <a href="/login" className="signup-button">Already have an account? <span className="signup-cta">Log In</span></a>
           </div>
 
           {openSnackbar && (

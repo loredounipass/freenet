@@ -5,10 +5,11 @@ const Home = () => {
   const { t } = useTranslation();
 
   return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>{t('home.title')}</h1>
-        <p>{t('home.subtitle')}</p>
-      </div>
+    <div className="home-hero">
+      <h1 className="home-title">{t('home.title')}</h1>
+
+      <p className="home-subtitle">{t('home.subtitle')}</p>
+    </div>
   );
 };
 

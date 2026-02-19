@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthContext } from './hooks/AuthContext'
 import useFindUser from './hooks/useFindUser'
 
@@ -12,6 +12,7 @@ import Register from './pages/Register'
 import Navbar from './components/Navbar'
 import Home from './components/Home'
 import VerifyToken from './components/2FA/verify-token'
+import Footer from './components/Footer'
 import Settings from './components/settings/Settings'
 import ResendTokenForm from './components/2FA/ResendTokenForm'
 import EmailVerificationComponent from './components/settings/verify'
@@ -41,7 +42,7 @@ export default function App() {
                                 backgroundColor: 'transparent',
                                 flexGrow: 1,
                                 height: '100vh',
-                                overflow: 'auto',
+                                overflow: 'auto'
                             }}
                         >
                             <Toolbar />
@@ -62,11 +63,29 @@ export default function App() {
                                 </Routes>
 
                             </Container>
+                            <FooterLoader />
                         </Box>
                     </Box>
                 </ThemeProvider>
                 </LanguageProvider>
             </AuthContext.Provider>
         </Router>
+    )
+}
+
+function FooterLoader() {
+    const location = useLocation()
+    const [show, setShow] = useState(false)
+
+    useEffect(() => {
+        // small delay to let route/component render first and avoid footer-only flash on refresh
+        const t = setTimeout(() => setShow(true), 80)
+        return () => clearTimeout(t)
+    }, [location.pathname])
+
+    return (
+        <div className={show ? 'footer-mounted' : 'footer-hidden'}>
+            {show && <Footer />}
+        </div>
     )
 }

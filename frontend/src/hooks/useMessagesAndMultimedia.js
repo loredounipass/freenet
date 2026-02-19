@@ -19,9 +19,18 @@ export default function useMessagesAndMultimedia() {
 	const socketRef = useRef(null);
 
 	useEffect(() => {
-		// connect to the backend namespace for messages (env var preferred)
-		// Fall back to `window.location.origin` if env var is not set to avoid calling `.replace` on undefined.
-		const rawSocketUrl = process.env.REACT_APP_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+		// connect to the backend namespace for messages
+		// Prefer explicit env `REACT_APP_SOCKET_URL`. If missing and running the
+		// CRA dev server (port 3000), default to backend on port 4000 so the
+		// client doesn't try to open a socket on the frontend dev server.
+		const rawSocketUrl = process.env.REACT_APP_SOCKET_URL || (typeof window !== 'undefined' ? (() => {
+			try {
+				if (window.location && window.location.hostname && window.location.port === '3000') {
+					return `${window.location.protocol}//${window.location.hostname}:4000`;
+				}
+			} catch (_) {}
+			return window.location.origin;
+		})() : '');
 		const socketBase = String(rawSocketUrl).replace(/\/$/, '');
 		const socket = io(`${socketBase}/messages`, {
 			withCredentials: true,
@@ -44,13 +53,33 @@ export default function useMessagesAndMultimedia() {
 		});
 
 		socket.on('receiveMessage', (payload) => {
-			// prepend to messages list
-			setMessages(prev => [payload, ...prev]);
+			// prepend to messages list if not already present (avoid duplicates from fetch + socket)
+			setMessages(prev => {
+				if (!payload || !payload._id) return prev;
+				if (prev.some(m => m._id === payload._id)) return prev;
+				return [payload, ...prev];
+			});
 		});
 
 		socket.on('messageSent', (payload) => {
-			// sender receives messageSent; keep same behaviour
-			setMessages(prev => [payload, ...prev]);
+			// sender receives messageSent; avoid duplicate entries
+			setMessages(prev => {
+				if (!payload || !payload._id) return prev;
+				if (prev.some(m => m._id === payload._id)) return prev;
+				return [payload, ...prev];
+			});
+		});
+
+		socket.on('messageUpdated', (payload) => {
+			// replace existing message by _id or prepend if missing
+			setMessages(prev => {
+				if (!payload || !payload._id) return prev;
+				const idx = prev.findIndex(m => m._id === payload._id);
+				if (idx === -1) return [payload, ...prev];
+				const copy = [...prev];
+				copy[idx] = Object.assign({}, copy[idx], payload);
+				return copy;
+			});
 		});
 
 		socket.on('error', (err) => {
@@ -73,10 +102,18 @@ export default function useMessagesAndMultimedia() {
 			const resp = await MessagesAndMultimedia.getMyMessages();
 			const data = resp?.data;
 			// backend returns data in { data: [...] } or similar patterns
-			if (data && data.data) {
-				setMessages(Array.isArray(data.data) ? data.data : []);
-			} else if (Array.isArray(data)) {
-				setMessages(data);
+			let list = [];
+			if (data && data.data && Array.isArray(data.data)) list = data.data;
+			else if (Array.isArray(data)) list = data;
+			// normalize & dedupe by _id (server may return duplicates in some edge cases)
+			if (Array.isArray(list) && list.length > 0) {
+				const map = new Map();
+				for (const it of list) {
+					if (it && it._id) map.set(it._id, it);
+				}
+				setMessages(Array.from(map.values()));
+			} else {
+				setMessages([]);
 			}
 			return resp;
 		} catch (err) {

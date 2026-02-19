@@ -131,6 +131,31 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
+  @OnEvent('message.updated')
+  async handleMessageUpdatedEvent(payload: any) {
+    try {
+      const senderId = payload.sender;
+      const receiverId = payload.receiver;
+      if (!senderId || !receiverId) return;
+
+      const room = this.makeChatRoom(senderId, receiverId);
+      const roomSockets = await this.server.in(room).allSockets();
+      const receiverSockets = await this.server.in(`user:${receiverId}`).allSockets();
+      const senderSockets = await this.server.in(`user:${senderId}`).allSockets();
+
+      const receiveTargets = new Set<string>([...roomSockets, ...receiverSockets]);
+      for (const sockId of receiveTargets) {
+        this.server.to(sockId).emit('messageUpdated', payload);
+      }
+
+      for (const sockId of senderSockets) {
+        this.server.to(sockId).emit('messageUpdated', payload);
+      }
+    } catch (err) {
+      this.logger.warn(`Error emitting message.updated event: ${err}`);
+    }
+  }
+
   @SubscribeMessage('joinChat')
   handleJoinChat(client: Socket, payload: { otherUserId: string }) {
     if (!client.data?.user || !client.data.user._id) {

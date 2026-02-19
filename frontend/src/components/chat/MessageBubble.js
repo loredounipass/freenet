@@ -1,7 +1,6 @@
-import React from 'react';
-import { Box, Typography } from '@mui/material';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
-import DoneIcon from '@mui/icons-material/Done';
+import React, { useState, useRef, useEffect } from 'react';
+import { apiOrigin } from '../../api/http';
+
 
 /**
  * Formats a message timestamp to HH:MM.
@@ -16,14 +15,73 @@ const formatTime = (dateStr) => {
  * Returns a status icon based on message delivery status.
  */
 const StatusIcon = ({ status }) => {
-  if (status === 'read') {
-    return <DoneAllIcon sx={{ fontSize: 14, color: '#2186EB', ml: 0.5 }} />;
-  }
-  if (status === 'delivered') {
-    return <DoneAllIcon sx={{ fontSize: 14, color: '#9E9E9E', ml: 0.5 }} />;
-  }
-  return <DoneIcon sx={{ fontSize: 14, color: '#9E9E9E', ml: 0.5 }} />;
+  if (status === 'read') return <span className="status-icon read">✓✓</span>;
+  if (status === 'delivered') return <span className="status-icon delivered">✓✓</span>;
+  return <span className="status-icon sent">✓</span>;
 };
+
+/**
+ * InlineAudioPlayer - small WhatsApp-like audio player
+ * Props: { src, isOwn }
+ */
+function InlineAudioPlayer({ src, isOwn }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => setProgress(audio.currentTime || 0);
+    const onLoaded = () => setDuration(audio.duration || 0);
+    const onEnded = () => setPlaying(false);
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('ended', onEnded);
+    return () => {
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [src]);
+
+  const toggle = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    try {
+      if (playing) {
+        audio.pause();
+        setPlaying(false);
+      } else {
+        await audio.play();
+        setPlaying(true);
+      }
+    } catch (_) {
+      // autoplay errors can be ignored
+    }
+  };
+
+  const pct = duration > 0 ? Math.min(100, Math.round((progress / duration) * 100)) : 0;
+
+  const fmt = (s) => {
+    if (!s || !isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  };
+
+  return (
+    <div className={`inline-audio-player ${isOwn ? 'own' : 'other'}`}>
+      <button className="iap-playbtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>{playing ? '❚❚' : '►'}</button>
+      <div className="iap-track">
+        <div className="iap-progress" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="iap-time">{fmt(progress)} / {fmt(duration)}</div>
+      <audio ref={audioRef} src={src} preload="metadata" />
+    </div>
+  );
+}
 
 /**
  * MessageBubble - Renders a single chat message bubble.
@@ -40,149 +98,62 @@ export default function MessageBubble({ message, isOwn, showTail = true }) {
     switch (type) {
       case 'image':
         return (
-          <Box>
-            {multimediaUrl && (
-              <Box
-                component="img"
-                src={multimediaUrl}
-                alt="shared"
-                sx={{
-                  maxWidth: 250,
-                  maxHeight: 300,
-                  borderRadius: 2,
-                  objectFit: 'cover',
-                  display: 'block',
-                  mb: content ? 0.5 : 0,
-                }}
-              />
+          <div>
+            {multimediaUrl ? (
+              <img src={multimediaUrl.startsWith('/') ? (apiOrigin + multimediaUrl) : multimediaUrl} alt="shared" className="msg-media msg-image" />
+            ) : (
+              // show placeholder while processing or when no url yet
+              <div className="msg-media-placeholder">{message.multimediaStatus === 'processing' ? 'Enviando...' : 'Imagen'}</div>
             )}
             {content && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: isOwn ? '#fff' : '#333',
-                  fontSize: '0.9rem',
-                  lineHeight: 1.4,
-                  wordBreak: 'break-word',
-                }}
-              >
-                {content}
-              </Typography>
+              <div className="msg-text" style={{ color: isOwn ? '#fff' : '#333' }}>{content}</div>
             )}
-          </Box>
+          </div>
         );
 
       case 'video':
         return (
-          <Box>
-            {multimediaUrl && (
-              <Box
-                component="video"
-                src={multimediaUrl}
-                controls
-                sx={{
-                  maxWidth: 280,
-                  borderRadius: 2,
-                  display: 'block',
-                  mb: content ? 0.5 : 0,
-                }}
-              />
+          <div>
+            {multimediaUrl ? (
+              <video src={multimediaUrl.startsWith('/') ? (apiOrigin + multimediaUrl) : multimediaUrl} controls className="msg-media msg-video" />
+            ) : (
+              <div className="msg-media-placeholder">{message.multimediaStatus === 'processing' ? 'Procesando video...' : 'Video'}</div>
             )}
             {content && (
-              <Typography
-                variant="body2"
-                sx={{ color: isOwn ? '#fff' : '#333', fontSize: '0.9rem', wordBreak: 'break-word' }}
-              >
-                {content}
-              </Typography>
+              <div className="msg-text" style={{ color: isOwn ? '#fff' : '#333' }}>{content}</div>
             )}
-          </Box>
+          </div>
         );
 
       case 'audio':
         return (
-          <Box>
-            {multimediaUrl && (
-              <Box component="audio" src={multimediaUrl} controls sx={{ maxWidth: 250, display: 'block', mb: content ? 0.5 : 0 }} />
+          <div>
+            {multimediaUrl ? (
+              <InlineAudioPlayer src={multimediaUrl.startsWith('/') ? (apiOrigin + multimediaUrl) : multimediaUrl} isOwn={isOwn} />
+            ) : (
+              <div className="msg-media-placeholder">{message.multimediaStatus === 'processing' ? 'Procesando audio...' : 'Audio'}</div>
             )}
             {content && (
-              <Typography
-                variant="body2"
-                sx={{ color: isOwn ? '#fff' : '#333', fontSize: '0.9rem', wordBreak: 'break-word' }}
-              >
-                {content}
-              </Typography>
+              <div className="msg-text" style={{ color: isOwn ? '#fff' : '#333' }}>{content}</div>
             )}
-          </Box>
+          </div>
         );
 
       default:
-        return (
-          <Typography
-            variant="body2"
-            sx={{
-              color: isOwn ? '#fff' : '#333',
-              fontSize: '0.9rem',
-              lineHeight: 1.4,
-              wordBreak: 'break-word',
-            }}
-          >
-            {content}
-          </Typography>
-        );
+        return <div className="msg-text" style={{ color: isOwn ? '#fff' : '#333' }}>{content}</div>;
     }
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: isOwn ? 'flex-end' : 'flex-start',
-        mb: showTail ? 0.8 : 0.3,
-        px: 1,
-      }}
-    >
-      <Box
-        sx={{
-          maxWidth: '75%',
-          bgcolor: isOwn ? '#2186EB' : '#F0F0F0',
-          color: isOwn ? '#fff' : '#333',
-          borderRadius: isOwn
-            ? showTail
-              ? '16px 16px 4px 16px'
-              : '16px 4px 4px 16px'
-            : showTail
-              ? '16px 16px 16px 4px'
-              : '4px 16px 16px 4px',
-          px: 1.5,
-          py: 1,
-          position: 'relative',
-        }}
-      >
+    <div className={`message-row ${isOwn ? 'own' : 'other'} ${showTail ? 'tail' : ''}`}>
+      <div className={`message-bubble ${isOwn ? 'own' : 'other'}`}>
         {renderContent()}
 
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            mt: 0.3,
-            gap: 0.3,
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{
-              color: isOwn ? 'rgba(255,255,255,0.7)' : '#9E9E9E',
-              fontSize: '0.68rem',
-              lineHeight: 1,
-            }}
-          >
-            {formatTime(createdAt)}
-          </Typography>
+        <div className="message-meta">
+          <span className="message-time">{formatTime(createdAt)}</span>
           {isOwn && <StatusIcon status={status} />}
-        </Box>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -29,11 +29,29 @@ export class MessagesAndMultimediaService {
       this.eventEmitter.on('multimedia.ready', async (payload: any) => {
         try {
           if (payload?.messageId) {
-            await this.messageModel.findByIdAndUpdate(payload.messageId, {
+            // Update only the multimediaStatus on the message (schema doesn't include multimediaUrl)
+            const updated = await this.messageModel.findByIdAndUpdate(payload.messageId, {
               multimediaStatus: 'ready',
-              multimediaUrl: payload.url,
-            }).exec();
-            this.eventEmitter.emit('message.updated', { messageId: payload.messageId, multimediaStatus: 'ready', multimediaUrl: payload.url });
+            }, { new: true }).lean().exec();
+
+            if (updated) {
+              const out = {
+                _id: updated._id?.toString(),
+                content: updated.content,
+                type: updated.type,
+                sender: updated.sender?.toString(),
+                receiver: updated.receiver?.toString(),
+                multimediaId: updated.multimediaId,
+                multimediaStatus: updated.multimediaStatus,
+                // Include the URL coming from the multimedia processor payload so clients can load it
+                multimediaUrl: payload.url,
+                thumbnailUrl: payload.thumbnailUrl,
+                status: updated.status,
+                createdAt: (updated as any).createdAt,
+                updatedAt: (updated as any).updatedAt,
+              };
+              this.eventEmitter.emit('message.updated', out);
+            }
           }
         } catch (_) {}
       });
@@ -41,10 +59,25 @@ export class MessagesAndMultimediaService {
       this.eventEmitter.on('multimedia.failed', async (payload: any) => {
         try {
           if (payload?.messageId) {
-            await this.messageModel.findByIdAndUpdate(payload.messageId, {
+            const updated = await this.messageModel.findByIdAndUpdate(payload.messageId, {
               multimediaStatus: 'failed',
-            }).exec();
-            this.eventEmitter.emit('message.updated', { messageId: payload.messageId, multimediaStatus: 'failed' });
+            }, { new: true }).lean().exec();
+            if (updated) {
+              const out = {
+                _id: updated._id?.toString(),
+                content: updated.content,
+                type: updated.type,
+                sender: updated.sender?.toString(),
+                receiver: updated.receiver?.toString(),
+                multimediaId: updated.multimediaId,
+                multimediaStatus: updated.multimediaStatus,
+                multimediaUrl: payload.url || null,
+                status: updated.status,
+                createdAt: (updated as any).createdAt,
+                updatedAt: (updated as any).updatedAt,
+              };
+              this.eventEmitter.emit('message.updated', out);
+            }
           }
         } catch (_) {}
       });
@@ -133,6 +166,18 @@ export class MessagesAndMultimediaService {
       return tb - ta;
     });
 
+    // If some messages reference multimedia, fetch those multimedia docs so
+    // returned messages include the final public URL (so clients can play
+    // media after a reload). This avoids relying only on transient socket
+    // events to carry the URL.
+    const multimediaIds = merged.filter((d: any) => d.multimediaId).map((d: any) => d.multimediaId.toString());
+    const multimediaMap: Map<string, any> = new Map();
+    if (multimediaIds.length > 0) {
+      const uniq = Array.from(new Set(multimediaIds));
+      const mDocs = await this.multimediaModel.find({ _id: { $in: uniq } }).select('_id url thumbnailUrl status').lean().exec();
+      for (const m of mDocs) multimediaMap.set(m._id?.toString(), m);
+    }
+
     return merged.map((doc: any) => ({
       _id: doc._id,
       content: doc.content,
@@ -140,6 +185,9 @@ export class MessagesAndMultimediaService {
       sender: doc.sender?.toString(),
       receiver: doc.receiver?.toString(),
       multimediaId: doc.multimediaId,
+      multimediaStatus: doc.multimediaStatus || (multimediaMap.get(doc.multimediaId?.toString())?.status || null),
+      multimediaUrl: multimediaMap.get(doc.multimediaId?.toString())?.url || undefined,
+      thumbnailUrl: multimediaMap.get(doc.multimediaId?.toString())?.thumbnailUrl || undefined,
       status: doc.status,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
