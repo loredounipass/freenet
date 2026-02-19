@@ -78,8 +78,22 @@ function FooterLoader() {
     const [show, setShow] = useState(false)
 
     useEffect(() => {
+        // show footer only on public / pages / 2FA routes to avoid footer on private areas
+        const publicPaths = new Set([
+            '/login',
+            '/register',
+            '/forgot-password',
+            '/reset-password',
+            '/verifytoken',
+            '/resendtoken'
+        ])
+
+        const path = location.pathname
+
+        const shouldShow = publicPaths.has(path)
+
         // small delay to let route/component render first and avoid footer-only flash on refresh
-        const t = setTimeout(() => setShow(true), 80)
+        const t = setTimeout(() => setShow(shouldShow), 80)
         return () => clearTimeout(t)
     }, [location.pathname])
 
