@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { AuthContext } from './hooks/AuthContext'
 import useFindUser from './hooks/useFindUser'
 
@@ -29,7 +29,6 @@ export default function App() {
     const mdTheme = createTheme();
 
     return (
-        <Router>
             <AuthContext.Provider value={{ auth, setAuth, loading }}>
                 <LanguageProvider>
                 <ThemeProvider theme={mdTheme}>
@@ -69,7 +68,6 @@ export default function App() {
                 </ThemeProvider>
                 </LanguageProvider>
             </AuthContext.Provider>
-        </Router>
     )
 }
 
