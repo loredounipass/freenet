@@ -1,22 +1,10 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next'; // Importar useTranslation
+import { useTranslation } from 'react-i18next';
 import ChangePasswordComponent from './ChangePasswordComponent';
 import TwoFactorAuthComponent from './TwoFactorAuthComponent';
 import LanguageSelectorComponent from './LanguageSelectorComponent';
 import UserProfileComponent from './UserProfileComponent'; 
 import VerifyEmailComponent from './VerifyEmailComponent'; 
-import { 
-    Box, 
-    Paper, 
-    List, 
-    ListItem, 
-    ListItemIcon, 
-    ListItemText, 
-    Typography, 
-    Divider, 
-    useTheme, 
-    useMediaQuery 
-} from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 import SecurityIcon from '@mui/icons-material/Security';
 import LanguageIcon from '@mui/icons-material/Language';
@@ -47,94 +35,56 @@ const renderSection = (selectedSection) => {
 function Settings() {
     const { t } = useTranslation(); 
     const [selectedSection, setSelectedSection] = useState('userProfile');
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     return (
-        <Box 
-            sx={{ 
-                mt: 4, 
-                display: 'flex', 
-                minHeight: '80vh', 
-                width: '100%', 
-                mx: isMobile ? 0 : 'auto'
-            }}
-        >
-            <Paper elevation={6} sx={{ borderRadius: 2, overflow: 'hidden', display: 'flex', width: '100%' }}>
-                <Box sx={{ width: isMobile ? '17%' : '20%', bgcolor: theme.palette.grey[200] }}>
-                    <List>
+        <div className="settings-container">
+            <div className="settings-card">
+                {/* Sidebar */}
+                <div className="settings-sidebar">
+                    <ul className="sidebar-list">
                         {sections.map(({ id, label, icon }) => (
-                            <ListItem
-                                button
-                                key={id}
-                                onClick={() => setSelectedSection(id)}
-                                selected={selectedSection === id}
-                                sx={{
-                                    bgcolor: selectedSection === id ? theme.palette.primary.light : 'transparent',
-                                    '&:hover': {
-                                        bgcolor: theme.palette.primary.main,
-                                        color: '#FFFFFF',
-                                    },
-                                }}
-                            >
-                                <ListItemIcon sx={{ fontSize: isMobile ? 20 : 24 }}>{icon}</ListItemIcon>
-                                <ListItemText
-                                    primary={t(label)} 
-                                    sx={{
-                                        display: isMobile ? 'none' : 'block',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        typography: 'body2',
-                                        fontSize: isMobile ? '0.875rem' : '1rem',
-                                    }}
-                                />
-                            </ListItem>
+                            <li key={id}>
+                                <button
+                                    onClick={() => setSelectedSection(id)}
+                                    className={`sidebar-btn ${selectedSection === id ? 'active' : ''}`}
+                                >
+                                    <span className="sidebar-icon">{icon}</span>
+                                    <span className="sidebar-text">
+                                        {t(label)}
+                                    </span>
+                                </button>
+                            </li>
                         ))}
-                        <ListItem
-                            button
-                            component={Link}
-                            to="/"
-                            sx={{
-                                marginTop: 'auto', 
-                                '&:hover': {
-                                    bgcolor: theme.palette.primary.main,
-                                    color: '#FFFFFF',
-                                },
-                            }}
-                        >
-                            <ListItemIcon sx={{ fontSize: isMobile ? 20 : 24 }}><ArrowBackIcon /></ListItemIcon>
-                            <ListItemText
-                                primary={t('go_back')} 
-                                sx={{
-                                    display: isMobile ? 'none' : 'block',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    typography: 'body2',
-                                    fontSize: isMobile ? '0.875rem' : '1rem',
-                                }}
-                            />
-                        </ListItem>
-                    </List>
-                </Box>
-                <Box sx={{ flexGrow: 1, p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <SettingsIcon sx={{ fontSize: isMobile ? 30 : 40, mr: 1, mb: 0.5 }} />
-                        <Typography 
-                            variant={isMobile ? 'h5' : 'h4'} 
-                            component="h1" 
-                            gutterBottom 
-                            sx={{ lineHeight: '40px', fontSize: isMobile ? '1.5rem' : '2rem' }} 
-                        >
-                            {t('settings_title')} 
-                        </Typography>
-                    </Box>
-                    <Divider sx={{ mb: 2 }} />
-                    {renderSection(selectedSection)}
-                </Box>
-            </Paper>
-        </Box>
+                        
+                        <li className="sidebar-bottom-item">
+                            <Link
+                                to="/"
+                                className="sidebar-btn"
+                            >
+                                <span className="sidebar-icon"><ArrowBackIcon /></span>
+                                <span className="sidebar-text">
+                                    {t('go_back')}
+                                </span>
+                            </Link>
+                        </li>
+                    </ul>
+                </div>
+
+                {/* Main Content */}
+                <div className="settings-content">
+                    <div className="settings-header">
+                        <SettingsIcon className="settings-header-icon" />
+                        <h1 className="settings-title">
+                            {t('settings_title')}
+                        </h1>
+                    </div>
+                    
+                    <div style={{ marginTop: '1rem' }}>
+                        {renderSection(selectedSection)}
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 

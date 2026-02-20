@@ -1,11 +1,4 @@
 import React, { useEffect, useState, useContext } from 'react';
-import {
-    Typography,
-    TextField,
-    Button,
-    Alert,
-    Avatar
-} from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import useAuth from '../../hooks/useAuth';
 import { AuthContext } from '../../hooks/AuthContext';
@@ -14,12 +7,13 @@ function UserProfileComponent() {
     const { updateUserProfile, error, successMessage } = useAuth();
     const { auth } = useContext(AuthContext);
     
-    const [firstName, setFirstName] = useState(auth.firstName || '');
-    const [lastName, setLastName] = useState(auth.lastName || '');
-    const [email, setEmail] = useState(auth.email || '');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
     const [localError, setLocalError] = useState('');
     const [localSuccessMessage, setLocalSuccessMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [initialized, setInitialized] = useState(false);
 
     const TEN_MINUTES_MS = 10 * 60 * 1000;
     let remainingMinutes = 0;
@@ -31,12 +25,13 @@ function UserProfileComponent() {
     }
 
     useEffect(() => {
-        if (auth) {
+        if (auth && !initialized) {
             setFirstName(auth.firstName || '');
             setLastName(auth.lastName || '');
             setEmail(auth.email || '');
+            setInitialized(true);
         }
-    }, [auth]);
+    }, [auth, initialized]);
 
     const handleUpdateProfile = async () => {
         setLocalError('');
@@ -60,6 +55,8 @@ function UserProfileComponent() {
         try {
             setIsSubmitting(true);
             await updateUserProfile(body);
+            // After successful update, re-sync initialized state if needed, 
+            // but auth update usually triggers context update.
         } finally {
             setIsSubmitting(false);
         }
@@ -74,65 +71,85 @@ function UserProfileComponent() {
         }
     }, [successMessage, error]);
 
+    const InputField = ({ label, value, onChange, type = "text", required = false }) => (
+        <div className="settings-input-group">
+            <label className="settings-label">
+                {label} {required && <span className="settings-required-asterisk">*</span>}
+            </label>
+            <input
+                type={type}
+                value={value}
+                onChange={onChange}
+                className="settings-input"
+                required={required}
+            />
+        </div>
+    );
+
     return (
-        <>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
-                <Avatar style={{ backgroundColor: '#1976D2', width: '48px', height: '48px' }}>
-                    <PersonIcon />
-                </Avatar>
-                <Typography variant="h6" component="h2" style={{ marginTop: '8px', fontWeight: 'bold' }}>
-                    Perfil de Usuario
-                </Typography>
-            </div>
-            <form noValidate autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px', margin: '0 auto' }}>
-                <TextField
-                    label="Primer Nombre"
-                    variant="outlined"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                />
-                <TextField
-                    label="Apellido"
-                    variant="outlined"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                />
-                <TextField
-                    label="Correo Electrónico"
-                    variant="outlined"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleUpdateProfile}
-                    disabled={isSubmitting || remainingMinutes > 0}
-                    style={{ marginTop: '16px' }}
+        <div className="settings-section-wrapper">
+            <div className="settings-form-card">
+                <div className="settings-section-header">
+                    <div className="settings-large-icon">
+                        <PersonIcon className="settings-large-icon-inner" />
+                    </div>
+                    <h2 className="settings-title">
+                        Perfil de Usuario
+                    </h2>
+                </div>
+
+                <form 
+                    noValidate 
+                    autoComplete="off" 
+                    className="settings-form"
+                    onSubmit={(e) => e.preventDefault()}
                 >
-                    {isSubmitting ? 'Guardando...' : 'Actualizar Perfil'}
-                </Button>
-                {remainingMinutes > 0 && (
-                    <Alert severity="warning" style={{ marginTop: '16px' }}>
-                        No puedes actualizar tu perfil por otros {remainingMinutes} minuto(s).
-                    </Alert>
-                )}
-                {localSuccessMessage && (
-                    <Alert severity="success" style={{ marginTop: '16px' }}>
-                        {localSuccessMessage}
-                    </Alert>
-                )}
-                {localError && (
-                    <Alert severity="error" style={{ marginTop: '16px' }}>
-                        {localError}
-                    </Alert>
-                )}
-            </form>
-        </>
+                    <InputField
+                        label="Primer Nombre"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                    />
+                    <InputField
+                        label="Apellido"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                    />
+                    <InputField
+                        label="Correo Electrónico"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+
+                    <button
+                        onClick={handleUpdateProfile}
+                        disabled={isSubmitting || remainingMinutes > 0}
+                        className="settings-btn settings-btn-primary"
+                    >
+                        {isSubmitting ? 'Guardando...' : 'Actualizar Perfil'}
+                    </button>
+
+                    {remainingMinutes > 0 && (
+                        <div className="settings-alert settings-alert-warning">
+                            No puedes actualizar tu perfil por otros {remainingMinutes} minuto(s).
+                        </div>
+                    )}
+                    {localSuccessMessage && (
+                        <div className="settings-alert settings-alert-success">
+                            {localSuccessMessage}
+                        </div>
+                    )}
+                    {localError && (
+                        <div className="settings-alert settings-alert-error">
+                            {localError}
+                        </div>
+                    )}
+                </form>
+            </div>
+        </div>
     );
 }
 

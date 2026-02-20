@@ -2,22 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../hooks/AuthContext';
 import User from '../../services/user';
 import useAuth from '../../hooks/useAuth';
-import {
-  Switch,
-  FormControlLabel,
-  Typography,
-  Box,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Button,
-  Paper,
-  Snackbar
-} from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
-import MuiAlert from '@mui/material/Alert';
+import CloseIcon from '@mui/icons-material/Close';
 
 const TwoFactorAuthComponent = () => {
   const { auth } = useContext(AuthContext);
@@ -39,7 +26,6 @@ const TwoFactorAuthComponent = () => {
       }
       try {
         const response = await User.getTokenStatus({ signal: controller.signal });
-        // backend may return { isTokenEnabled } or { data: { isTokenEnabled } }
         const tokenStatus = response?.data?.isTokenEnabled ?? response?.data?.data?.isTokenEnabled;
         setIsTokenEnabled(Boolean(tokenStatus));
       } catch (err) {
@@ -65,7 +51,6 @@ const TwoFactorAuthComponent = () => {
   };
   const updateTokenStatusOnly = async (newStatus) => {
     const previousStatus = isTokenEnabled;
-    // Optimistically update UI
     setIsTokenEnabled(newStatus);
     setShowWarning(!newStatus);
     setLoading(true);
@@ -74,7 +59,6 @@ const TwoFactorAuthComponent = () => {
       setSnackbar({ open: true, message: newStatus ? 'Autenticación de dos factores activada.' : 'Autenticación de dos factores desactivada.', severity: 'success' });
       return res;
     } catch (err) {
-      // Revert optimistic change on error
       setIsTokenEnabled(previousStatus);
       setShowWarning(!previousStatus);
       setError(err?.message || 'No se pudo actualizar el estado.');
@@ -100,50 +84,95 @@ const TwoFactorAuthComponent = () => {
     }
   }, [snackbar.open]);
 
-  return (
-    <Paper elevation={3} sx={{ padding: 3, borderRadius: 2, maxWidth: 400, margin: 'auto' }}>
-      <Typography variant="h5" gutterBottom>
-        2FA Auth
-      </Typography>
-      <FormControlLabel
-        control={<Switch checked={isTokenEnabled} onChange={toggleTwoFactorAuth} color="primary" disabled={loading} />}
-        label={
-          isTokenEnabled
-            ? <span style={{ display: 'flex', alignItems: 'center' }}>
-                Desactivar <CheckCircleIcon style={{ color: 'green', marginLeft: 4, fontSize: '1.2rem' }} />
-              </span>
-            : 'Activar'
-        }
+  // Components
+  const Switch = ({ checked, onChange, disabled }) => (
+    <button
+      onClick={disabled ? null : onChange}
+      className={`settings-switch-btn ${checked ? 'active' : 'inactive'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
+      <span
+        className={`settings-switch-thumb ${checked ? 'active' : 'inactive'}`}
       />
-      {isTokenEnabled && <Typography variant="body2" style={{ color: 'green' }}>La autenticación de dos factores está activa.</Typography>}
+    </button>
+  );
+
+  return (
+    <div className="settings-2fa-container">
+      <h2 className="settings-title" style={{ marginBottom: '1.5rem' }}>
+        2FA Auth
+      </h2>
+      
+      <div className="settings-2fa-row">
+        <div className="settings-2fa-status">
+          <span style={{ marginRight: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+            {isTokenEnabled ? 'Desactivar' : 'Activar'}
+          </span>
+          {isTokenEnabled && <CheckCircleIcon style={{ color: '#22c55e', fontSize: '1.125rem' }} />}
+        </div>
+        <Switch 
+          checked={isTokenEnabled} 
+          onChange={toggleTwoFactorAuth} 
+          disabled={loading} 
+        />
+      </div>
+
+      {isTokenEnabled && (
+        <p style={{ fontSize: '0.875rem', color: '#4ade80', marginBottom: '1rem' }}>
+          La autenticación de dos factores está activa.
+        </p>
+      )}
+
       {showWarning && (
-        <Box sx={{ display: 'flex', alignItems: 'center', color: 'red', marginBottom: 1 }}>
-          <WarningIcon sx={{ marginRight: 1 }} />
-          <Typography variant="body2">Desactivar la autenticación de dos factores pone en riesgo tu cuenta.</Typography>
-        </Box>
+        <div className="settings-alert settings-alert-error">
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            <WarningIcon style={{ color: '#f87171', marginRight: '0.5rem' }} fontSize="small" />
+            <span>Desactivar la autenticación de dos factores pone en riesgo tu cuenta.</span>
+          </div>
+        </div>
       )}
 
-      <Dialog open={confirmDialogOpen} onClose={() => handleConfirmDialogClose(false)} PaperProps={{ sx: { margin: 'auto' } }}>
-        <DialogTitle>Confirmar Desactivación</DialogTitle>
-        <DialogContent>
-          <Typography>¿Estás seguro de que deseas desactivar la autenticación de dos factores? Esto pone en riesgo tu cuenta a cibercriminales.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => handleConfirmDialogClose(false)} color="error" variant="contained">Cancelar</Button>
-          <Button onClick={() => handleConfirmDialogClose(true)} color="primary" variant="contained">Desactivar</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
-        <MuiAlert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</MuiAlert>
-      </Snackbar>
-
-      {error && (
-        <Snackbar open={true} autoHideDuration={6000} onClose={() => setError(null)}>
-          <MuiAlert elevation={6} variant="filled" onClose={() => setError(null)} severity="error">{error}</MuiAlert>
-        </Snackbar>
+      {/* Custom Modal */}
+      {confirmDialogOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 className="modal-title">Confirmar Desactivación</h3>
+            <p className="modal-text">
+              ¿Estás seguro de que deseas desactivar la autenticación de dos factores? Esto pone en riesgo tu cuenta a cibercriminales.
+            </p>
+            <div className="modal-actions">
+              <button
+                onClick={() => handleConfirmDialogClose(false)}
+                className="btn-danger"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleConfirmDialogClose(true)}
+                className="btn-secondary"
+              >
+                Desactivar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </Paper>
+
+      {/* Custom Snackbar */}
+      {(snackbar.open || error) && (
+        <div className={`custom-snackbar ${snackbar.severity === 'success' ? 'success' : 'error'} ${error ? 'error' : ''}`}>
+          <span>{snackbar.open ? snackbar.message : error}</span>
+          <button 
+            onClick={() => {
+                if(error) setError(null);
+                else handleCloseSnackbar();
+            }}
+            className="snackbar-close"
+          >
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 

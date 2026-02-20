@@ -1,5 +1,4 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Alert, Typography, CircularProgress, Container } from '@mui/material';
 import { AuthContext } from '../../hooks/AuthContext'; 
 import useAuth from '../../hooks/useAuth'; 
 
@@ -45,30 +44,37 @@ const EmailVerificationStatus = () => {
     }, [auth, isEmailVerified]); 
 
     return (
-        <Container maxWidth="sm" sx={{ textAlign: 'center', paddingTop: 5 }}>
-            <Typography variant="h5" gutterBottom>
-                Verificar Estado del Correo Electrónico
-            </Typography>
-            <Typography variant="body1" gutterBottom>
-                Correo electrónico autenticado: <strong>{auth?.email || 'Correo no disponible'}</strong>
-            </Typography>
-            {loading ? (
-                <CircularProgress sx={{ mt: 3 }} />
-            ) : (
-                <>
-                    {localError && (
-                        <Alert severity="error" sx={{ mt: 3 }}>
-                            {localError}
-                        </Alert>
-                    )}
-                    {verificationStatus && (
-                        <Alert severity={verificationStatus.verified ? 'success' : 'warning'} sx={{ mt: 3 }}>
-                            {verificationStatus.message}
-                        </Alert>
-                    )}
-                </>
-            )}
-        </Container>
+        <div className="settings-full-page">
+            <div className="settings-section-wrapper" style={{ maxWidth: '32rem' }}>
+                <h1 className="settings-title" style={{ marginBottom: '1rem' }}>
+                    Verificar Estado del Correo Electrónico
+                </h1>
+                <p className="settings-text-secondary">
+                    Correo electrónico autenticado: <strong style={{ color: 'white' }}>{auth?.email || 'Correo no disponible'}</strong>
+                </p>
+                
+                {loading ? (
+                    <div className="settings-spinner-container">
+                        <div className="settings-spinner"></div>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {localError && (
+                            <div className="settings-alert settings-alert-error">
+                                {localError}
+                            </div>
+                        )}
+                        {verificationStatus && (
+                            <div className={`settings-verify-status-box ${verificationStatus.verified 
+                                    ? 'settings-verify-status-success' 
+                                    : 'settings-verify-status-warning'}`}>
+                                {verificationStatus.message}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 
