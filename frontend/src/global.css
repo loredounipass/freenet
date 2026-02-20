@@ -427,7 +427,7 @@ a {
 
 .settings-content {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1rem;
   background-color: #0b0f13;
 }
 
@@ -501,7 +501,7 @@ a {
 }
 
 .settings-title {
-  font-size: 1.875rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #f3f4f6;
 }
@@ -531,18 +531,25 @@ a {
 
 .settings-input {
   width: 100%;
-  padding: 0.5rem 1rem;
-  background-color: #111b21;
-  border: 1px solid #374151;
-  border-radius: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 0.75rem;
   color: #ffffff;
   outline: none;
-  transition: all 200ms;
+  transition: box-shadow 180ms ease, transform 120ms ease, border-color 180ms ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.settings-input::placeholder {
+  color: #6f8a96;
+  opacity: 1;
 }
 
 .settings-input:focus {
-  border-color: transparent;
-  box-shadow: 0 0 0 2px #3b82f6;
+  border-color: #3b82f6;
+  box-shadow: 0 6px 18px rgba(11,15,19,0.35), 0 0 0 4px rgba(59,130,246,0.06);
+  transform: translateY(-1px);
 }
 
 .settings-password-wrapper {
@@ -847,17 +854,17 @@ a {
 /* Shared Section Styles */
 .settings-section-wrapper {
   width: 100%;
-  max-width: 28rem; /* max-w-md */
+  max-width: 24rem; /* reduced to avoid overflow */
   margin-left: auto;
   margin-right: auto;
 }
 
 .settings-form-card {
-  background-color: #111b21;
-  border: 1px solid #1f2937;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 1rem;
+  box-shadow: none;
 }
 
 .settings-section-header {
@@ -869,20 +876,20 @@ a {
 }
 
 .settings-large-icon {
-  width: 4rem;
-  height: 4rem;
+  width: 3.25rem;
+  height: 3.25rem;
   background-color: #2563eb;
   border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.2);
+  margin-bottom: 0.5rem;
+  box-shadow: 0 8px 12px -6px rgba(30, 58, 138, 0.15);
 }
 
 .settings-large-icon-inner {
   color: #ffffff;
-  font-size: 1.875rem;
+  font-size: 1.5rem;
 }
 
 /* Language Selector */
@@ -957,7 +964,8 @@ a {
 .settings-2fa-status {
   display: flex;
   align-items: center;
-  color: #d1d5db;
+  caret-color: #ffffff;
+  line-height: 1.4;
 }
 
 .settings-switch-btn {
@@ -966,7 +974,6 @@ a {
   height: 1.5rem;
   width: 2.75rem;
   align-items: center;
-  border-radius: 9999px;
   transition: background-color 200ms;
   border: none;
   cursor: pointer;
