@@ -1,0 +1,41 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
+
+export type FeedPostDocument = FeedPost & Document;
+
+@Schema({ timestamps: true })
+export class FeedPost {
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ enum: ['text', 'image', 'video'], default: 'text' })
+  type: string;
+
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  author: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'Multimedia' })
+  multimediaId?: Types.ObjectId;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  likes: Types.ObjectId[];
+
+  @Prop({ type: Number, default: 0 })
+  shares: number;
+
+  _id?: string;
+}
+
+export const FeedPostSchema = SchemaFactory.createForClass(FeedPost);
+
+// Common indexes to serve feed queries
+FeedPostSchema.index({ author: 1, createdAt: -1 });
+FeedPostSchema.index({ createdAt: -1 });
+
+FeedPostSchema.set('toJSON', {
+  transform: function (doc: any, ret: any) {
+    ret._id = ret._id?.toString();
+    delete ret.__v;
+  },
+});

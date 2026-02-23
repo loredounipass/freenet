@@ -21,6 +21,6 @@ import { MultimediaProcessor } from './messages-and-multimedia.processor';
   ],
   controllers: [MessagesAndMultimediaController],
   providers: [MessagesAndMultimediaService, MessagesGateway, LocalStorageProvider, MultimediaProcessor],
-  exports: [MessagesAndMultimediaService],
+  exports: [MessagesAndMultimediaService, MongooseModule],
 })
 export class MessagesAndMultimediaModule {}

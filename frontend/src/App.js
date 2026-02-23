@@ -20,6 +20,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import ConversationList from './components/chat/ConversationList'
 import ChatView from './components/chat/ChatView'
+import FeedList from './components/feed/FeedList'
 import { LanguageProvider } from './hooks/LanguageContext';
 import './i18n'; 
 
@@ -49,6 +50,7 @@ export default function App() {
                                 <Routes>
                                     <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
                                     <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+                                    <Route path="/feed" element={<PrivateRoute><FeedList /></PrivateRoute>} />
                                     <Route path="/verifyemail" element={<PrivateRoute><EmailVerificationComponent /></PrivateRoute>} />
                                     <Route path="/chat" element={<PrivateRoute><ConversationList /></PrivateRoute>} />
                                     <Route path="/chat/:userId" element={<PrivateRoute><ChatView /></PrivateRoute>} />

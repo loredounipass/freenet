@@ -398,6 +398,61 @@ a {
 @keyframes spin { to { transform: rotate(360deg) } }
 
 /* --- SETTINGS PAGE STYLES --- */
+
+/* Tailwind directives and component layer for feed UI (moved here by request) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand colors (adjust to your palette) */
+  --fb-primary:  #1d4ed8;
+  --fb-primary-600: #2563eb;
+  --fb-bg:       #f3f4f6;
+  --fb-surface:  #ffffff;
+  --fb-muted:    #6b7280;
+  --fb-border:   #e5e7eb;
+}
+
+@layer components {
+  .fb-card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 overflow-hidden;
+  }
+
+  .fb-post-form {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4 border border-gray-100;
+  }
+
+  .fb-author {
+    @apply font-semibold text-gray-800 dark:text-gray-100;
+  }
+
+  .fb-desc {
+    @apply text-gray-700 dark:text-gray-200 mb-2;
+  }
+
+  .fb-media {
+    @apply w-full h-auto bg-black/5 dark:bg-black/5;
+  }
+
+  .fb-time {
+    @apply text-xs text-gray-500;
+  }
+
+  .fb-btn-primary {
+    background-color: var(--fb-primary-600);
+    color: white;
+    @apply px-4 py-2 rounded-md hover:brightness-95 disabled:opacity-60;
+  }
+
+  .fb-list-wrapper {
+    @apply max-w-3xl mx-auto px-4;
+  }
+
+  .fb-empty {
+    @apply text-center py-8 text-gray-500;
+  }
+}
 .settings-container {
   margin-top: 1rem;
   display: flex;

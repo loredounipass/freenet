@@ -8,6 +8,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { TwoFactorAuthModule  } from './two-factor/verification.module';
 import { MessagesAndMultimediaModule } from './messages-and-multimedia/messages-and-multimedia.module';
+import { FeedAndMultimediaModule } from './feed-and-multimedia/feed-and-multimedia.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 
@@ -38,6 +39,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       }
     }),
     UserModule,
+    FeedAndMultimediaModule,
     MessagesAndMultimediaModule,
     AuthModule,
     TwoFactorAuthModule

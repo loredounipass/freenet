@@ -33,6 +33,11 @@ const messagesApi = `${baseApi}/messages`
 const messagesUploadApi = `${baseApi}/messages/upload`
 const myMessagesApi = `${baseApi}/messages/me`
 
+// feed endpoints
+const feedApi = `${baseApi}/feed`
+const feedUploadApi = `${baseApi}/feed/upload`
+const myFeedApi = `${baseApi}/feed/me`
+
 // endpoints de búsqueda de usuarios
 const searchUsersApi = `${baseApi}/user/search`
 
@@ -50,6 +55,12 @@ async function post(url, body) {
     return await axios.post(url, body)
 }
 
+async function postMultipart(url, formData, config = {}) {
+    // Do NOT set Content-Type header manually for multipart/form-data.
+    // Let the browser/axios set the correct Content-Type with boundary.
+    return await axios.post(url, formData, { ...config })
+}
+
 async function patch(url, body) {
     return await axios.patch(url, body)
 }
@@ -57,10 +68,14 @@ async function patch(url, body) {
 export {
     get,
     post,
+    postMultipart,
     patch,
     messagesApi,
     messagesUploadApi,
     myMessagesApi,
+    feedApi,
+    feedUploadApi,
+    myFeedApi,
     searchUsersApi,
     loginApi,
     logoutApi,
