@@ -41,6 +41,9 @@ export class Multimedia {
 
   @Prop({ enum: ['uploading', 'processing', 'ready', 'failed'], default: 'uploading' })
   status?: string;
+
+  @Prop({ type: Object, required: false })
+  processingJob?: any;
 }
 
 export const MultimediaSchema = SchemaFactory.createForClass(Multimedia);

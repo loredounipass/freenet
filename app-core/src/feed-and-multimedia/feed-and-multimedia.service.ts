@@ -7,6 +7,7 @@ import { Multimedia, MultimediaDocument } from '../messages-and-multimedia/schem
 import { CreatePostDto } from './dto/create-post.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UserService } from 'src/user/user.service';
+import { User, UserDocument } from 'src/user/schemas/user.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
@@ -20,6 +21,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     @InjectModel(Multimedia.name) private multimediaModel: Model<MultimediaDocument>,
     private readonly userService: UserService,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly eventEmitter: EventEmitter2,
     @InjectQueue('multimedia') private readonly multimediaQueue: Queue,
     private readonly storage: LocalStorageProvider,
@@ -28,6 +30,10 @@ export class FeedAndMultimediaService implements OnModuleInit {
   // Listen to multimedia processing events to update feed posts when media becomes ready
   onModuleInit() {
     try {
+      // avoid double-registering handlers during hot-reload/dev
+      try { (this.eventEmitter as any).removeAllListeners('multimedia.ready'); } catch (_) {}
+      try { (this.eventEmitter as any).removeAllListeners('multimedia.failed'); } catch (_) {}
+
       this.eventEmitter.on('multimedia.ready', async (payload: any) => {
         try {
           const mmId = payload?.multimediaId;
@@ -43,25 +49,28 @@ export class FeedAndMultimediaService implements OnModuleInit {
           }
           if (!postDoc) return;
 
-          // build enriched payload
-          const multimedia = await this.multimediaModel.findById(mmId).select('_id url thumbnailUrl status').lean().exec();
-          const commentsCount = await this.commentModel.countDocuments({ post: postDoc._id }).exec().catch(() => 0);
-          const out = {
-            _id: postDoc._id?.toString(),
-            description: postDoc.description,
-            type: postDoc.type,
-            author: postDoc.author?.toString(),
-            multimediaId: postDoc.multimediaId,
-            multimediaUrl: multimedia?.url || undefined,
-            thumbnailUrl: multimedia?.thumbnailUrl || undefined,
-            likesCount: Array.isArray(postDoc.likes) ? postDoc.likes.length : 0,
-            commentsCount,
-            shares: postDoc.shares || 0,
-            views: postDoc.views || 0,
-            createdAt: postDoc.createdAt,
-            updatedAt: postDoc.updatedAt,
-          };
-          this.eventEmitter.emit('post.updated', out);
+          // fetch multimedia doc and persist denormalized fields into post
+          try {
+            const mm = await this.multimediaModel.findById(mmId).lean().exec().catch(() => undefined);
+            if (mm) {
+              try {
+                await this.feedModel.updateOne({ _id: postDoc._id }, {
+                  $set: {
+                    multimediaUrl: mm.url || undefined,
+                    thumbnailUrl: mm.thumbnailUrl || undefined,
+                    multimediaStatus: mm.status || undefined,
+                  }
+                }).exec();
+              } catch (e) {
+                console.warn('Failed to update FeedPost denormalized multimedia fields', e);
+              }
+            }
+
+            const out = await this.buildPostOutput(postDoc._id?.toString());
+            this.eventEmitter.emit('post.updated', out);
+          } catch (err) {
+            console.warn('multimedia.ready handler error', err);
+          }
         } catch (_) {}
       });
 
@@ -78,74 +87,123 @@ export class FeedAndMultimediaService implements OnModuleInit {
             postDoc = await this.feedModel.findOne({ multimediaId: new Types.ObjectId(mmId) }).lean().exec();
           }
           if (!postDoc) return;
+          try {
+            // mark post multimediaStatus as failed
+            try {
+              await this.feedModel.updateOne({ _id: postDoc._id }, { $set: { multimediaStatus: 'failed' } }).exec();
+            } catch (e) { console.warn('Failed to update post multimediaStatus to failed', e); }
 
-          const commentsCount = await this.commentModel.countDocuments({ post: postDoc._id }).exec().catch(() => 0);
-          const out = {
-            _id: postDoc._id?.toString(),
-            description: postDoc.description,
-            type: postDoc.type,
-            author: postDoc.author?.toString(),
-            multimediaId: postDoc.multimediaId,
-            multimediaUrl: payload?.url || undefined,
-            thumbnailUrl: payload?.thumbnailUrl || undefined,
-            likesCount: Array.isArray(postDoc.likes) ? postDoc.likes.length : 0,
-            commentsCount,
-            shares: postDoc.shares || 0,
-            views: postDoc.views || 0,
-            createdAt: postDoc.createdAt,
-            updatedAt: postDoc.updatedAt,
-          };
-          this.eventEmitter.emit('post.updated', out);
+            const out = await this.buildPostOutput(postDoc._id?.toString());
+            this.eventEmitter.emit('post.updated', out);
+          } catch (err) {
+            console.warn('multimedia.failed handler error', err);
+          }
         } catch (_) {}
+      });
+
+      // listen for user profile updates to sync denormalized author names on posts
+      try { (this.eventEmitter as any).removeAllListeners('user.updated'); } catch (_) {}
+      this.eventEmitter.on('user.updated', async (payload: any) => {
+        try {
+          const userId = payload?._id || payload?.id || payload?.userId;
+          if (!userId) return;
+          const firstName = payload?.firstName;
+          const lastName = payload?.lastName;
+          if (firstName === undefined && lastName === undefined) return;
+
+          // update all posts for this author
+          try {
+            await this.feedModel.updateMany({ author: new Types.ObjectId(userId) }, { $set: { authorFirstName: firstName || undefined, authorLastName: lastName || undefined } }).exec();
+          } catch (e) {
+            console.warn('Failed to update FeedPost author names for user', userId, e);
+          }
+
+          // emit updated events for affected posts (limit to avoid storms: only most recent 200)
+          try {
+            const posts = await this.feedModel.find({ author: new Types.ObjectId(userId) }).sort({ createdAt: -1 }).limit(200).select('_id').lean().exec();
+            for (const p of posts) {
+              try {
+                const out = await this.buildPostOutput(p._id?.toString());
+                this.eventEmitter.emit('post.updated', out);
+              } catch (_) {}
+            }
+          } catch (e) { console.warn('Failed to emit post.updated after author name sync', e); }
+
+        } catch (err) { console.warn('user.updated handler error', err); }
       });
     } catch (_) {}
   }
 
+
+  
+
+  // Centralized builder: returns consistent DTO for a post
+  private async buildPostOutput(postId: string) {
+    if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
+
+    // load post lean
+    const post = await this.feedModel.findById(postId).lean().exec();
+    if (!post) throw new NotFoundException('Post not found');
+
+    // Use denormalized counters, author names and multimedia fields from post to avoid extra lookups
+    return {
+      _id: post._id?.toString(),
+      description: post.description,
+      type: post.type,
+      author: post.author?.toString(),
+      authorFirstName: (post as any).authorFirstName || undefined,
+      authorLastName: (post as any).authorLastName || undefined,
+      multimediaId: post.multimediaId,
+      multimediaUrl: (post as any).multimediaUrl || undefined,
+      thumbnailUrl: (post as any).thumbnailUrl || undefined,
+      // multimedia payload intentionally omitted; denormalized fields used instead
+      likesCount: typeof (post as any).likesCount === 'number' ? (post as any).likesCount : (Array.isArray(post.likes) ? post.likes.length : 0),
+      commentsCount: typeof (post as any).commentsCount === 'number' ? (post as any).commentsCount : 0,
+      shares: post.shares || 0,
+      views: post.views || 0,
+      createdAt: (post as any).createdAt,
+      updatedAt: (post as any).updatedAt,
+    };
+  }
+
+
+
   async createPost(dto: CreatePostDto, authorId: string) {
     if (!authorId || !Types.ObjectId.isValid(authorId)) throw new BadRequestException('Invalid authorId');
-    const author = await this.userService.getUserById(dto.authorId);
-    if (!author) throw new NotFoundException('Author not found');
+    // ensure actor exists and fetch display names
+    const actor = await this.userService.getUserById(authorId);
+    if (!actor) throw new NotFoundException('Author not found');
 
-    const created = await this.feedModel.create({
+    const postPayload: any = {
       description: dto.description,
       type: dto.type,
       author: new Types.ObjectId(authorId),
-      multimediaId: dto.multimediaId ? new Types.ObjectId(dto.multimediaId) : undefined,
-    });
-
-    // populate multimedia url/thumbnail if multimediaId was provided
-    let multimediaUrl: string | undefined = undefined
-    let thumbnailUrl: string | undefined = undefined
-    if (created.multimediaId) {
-      try {
-        const m = await this.multimediaModel.findById(created.multimediaId).select('_id url thumbnailUrl status').lean().exec()
-        if (m) {
-          multimediaUrl = m.url
-          thumbnailUrl = m.thumbnailUrl
-        }
-      } catch (_) {}
-    }
-
-    // count initial comments (usually zero)
-    let commentsCount = 0
-    try { commentsCount = await this.commentModel.countDocuments({ post: created._id }).exec() } catch (_) {}
-
-    const out = {
-      _id: created._id?.toString(),
-      description: created.description,
-      type: created.type,
-      author: created.author?.toString(),
-      multimediaId: created.multimediaId,
-      multimediaUrl,
-      thumbnailUrl,
-      likesCount: Array.isArray((created as any).likes) ? (created as any).likes.length : 0,
-      commentsCount,
-      shares: (created as any).shares || 0,
-      views: (created as any).views || 0,
-      createdAt: (created as any).createdAt,
-      updatedAt: (created as any).updatedAt,
+      authorFirstName: actor.firstName || undefined,
+      authorLastName: actor.lastName || undefined,
+      likesCount: 0,
+      commentsCount: 0,
     };
 
+    if (dto.multimediaId && Types.ObjectId.isValid(dto.multimediaId)) {
+      // fetch multimedia once to denormalize fields when provided
+      try {
+        const m = await this.multimediaModel.findById(dto.multimediaId).select('_id url thumbnailUrl status').lean().exec();
+        if (m) {
+          postPayload.multimediaId = m._id;
+          postPayload.multimediaUrl = m.url || undefined;
+          postPayload.thumbnailUrl = m.thumbnailUrl || undefined;
+          postPayload.multimediaStatus = m.status || undefined;
+        } else {
+          postPayload.multimediaId = undefined;
+        }
+      } catch (_) {
+        postPayload.multimediaId = undefined;
+      }
+    }
+
+    const created = await this.feedModel.create(postPayload);
+
+    const out = await this.buildPostOutput(created._id?.toString());
     this.eventEmitter.emit('post.created', out);
     return out;
   }
@@ -161,60 +219,163 @@ export class FeedAndMultimediaService implements OnModuleInit {
       authorId: authorId,
     } as CreatePostDto;
 
-    // upload to staging
+    // upload to staging first
     const stagingKey = `staging/${crypto.randomUUID()}-${file.originalname}`;
     const uploadResult = await this.storage.upload(file.buffer, stagingKey, file.mimetype);
 
-    // create multimedia doc
-    const multimediaDoc = await this.multimediaModel.create({
-      url: uploadResult.url,
-      type: dto.type,
-      owner: new Types.ObjectId(authorId),
-      description: dto.description || undefined,
-      mimeType: uploadResult.mimeType,
-      size: uploadResult.size,
-      status: 'uploading',
-    });
+    // Use transaction to guarantee consistency between multimedia and feed post.
+    // Also persist processingJob within multimedia (outbox-like) so background worker can enqueue if needed.
+    const actor = await this.userService.getUserById(authorId);
+    if (!actor) {
+      // cleanup upload
+      try { await this.storage.delete(uploadResult.key) } catch (_) {}
+      throw new NotFoundException('Author not found');
+    }
 
-    // create feed post referencing multimedia
-    const created = await this.feedModel.create({
-      description: dto.description,
-      type: dto.type,
-      author: new Types.ObjectId(authorId),
-      multimediaId: multimediaDoc._id,
-    });
+    const session = await this.feedModel.db.startSession();
+    let createdPostId: string | undefined = undefined;
+    let multimediaIdCreated: any = undefined;
+    let createdMultimediaDoc: any = undefined;
+    let createdPostDoc: any = undefined;
+    let usedTransaction = false;
+    try {
+      // Try transactional path first
+      try {
+        await session.withTransaction(async () => {
+          const multimediaDocs = await this.multimediaModel.create([
+            {
+              url: uploadResult.url,
+              type: dto.type,
+              owner: new Types.ObjectId(authorId),
+              description: dto.description || undefined,
+              mimeType: uploadResult.mimeType,
+              size: uploadResult.size,
+              status: 'processing',
+              processingJob: {
+                stagingKey,
+                ownerId: authorId,
+                mimeType: file.mimetype,
+                enqueued: false,
+              },
+            },
+          ], { session });
 
-    // link multimedia -> post
-    multimediaDoc.message = created._id;
-    multimediaDoc.status = 'processing';
-    multimediaDoc.url = uploadResult.url;
-    await multimediaDoc.save();
+          const mDoc = Array.isArray(multimediaDocs) ? multimediaDocs[0] : multimediaDocs;
+          multimediaIdCreated = mDoc._id;
 
-    // enqueue processing job; reuse messageId slot to carry post id so processors/listeners can map back
-    await this.multimediaQueue.add('process', {
-      stagingKey: uploadResult.key,
-      multimediaId: multimediaDoc._id.toString(),
-      messageId: created._id.toString(),
-      ownerId: authorId,
-      mimeType: file.mimetype,
-    });
+          const created = await this.feedModel.create([
+            {
+              description: dto.description,
+              type: dto.type,
+              author: new Types.ObjectId(authorId),
+              authorFirstName: actor.firstName || undefined,
+              authorLastName: actor.lastName || undefined,
+              multimediaId: mDoc._id,
+              multimediaUrl: uploadResult.url,
+              thumbnailUrl: mDoc.thumbnailUrl || undefined,
+              multimediaStatus: mDoc.status || 'processing',
+              likesCount: 0,
+              commentsCount: 0,
+            },
+          ], { session });
 
-    const out = {
-      _id: created._id?.toString(),
-      description: created.description,
-      type: created.type,
-      author: created.author?.toString(),
-      multimediaId: created.multimediaId,
-      multimediaUrl: uploadResult.url,
-      thumbnailUrl: multimediaDoc.thumbnailUrl || undefined,
-      likesCount: Array.isArray((created as any).likes) ? (created as any).likes.length : 0,
-      commentsCount: 0,
-      shares: (created as any).shares || 0,
-      views: (created as any).views || 0,
-      createdAt: (created as any).createdAt,
-      updatedAt: (created as any).updatedAt,
-    };
+          const p = Array.isArray(created) ? created[0] : created;
 
+          // link multimedia -> post (atomic update within session)
+          await this.multimediaModel.updateOne({ _id: mDoc._id }, { $set: { message: p._id, status: 'processing', url: uploadResult.url } }, { session }).exec();
+
+          createdPostId = p._id?.toString();
+          createdMultimediaDoc = mDoc;
+          createdPostDoc = p;
+        });
+        usedTransaction = true;
+      } catch (txErr) {
+        // Detect servers that don't support transactions (standalone mongod)
+        const msg = String(txErr?.message || '').toLowerCase();
+        if (msg.includes('transaction numbers are only allowed') || msg.includes('transactions are not supported')) {
+          // fallback to non-transactional flow below
+        } else {
+          // other error - rethrow after cleanup
+          throw txErr;
+        }
+      }
+
+      // If transactional path wasn't used (standalone server), perform non-transactional but compensating operations
+      if (!usedTransaction) {
+        try {
+          createdMultimediaDoc = await this.multimediaModel.create({
+            url: uploadResult.url,
+            type: dto.type,
+            owner: new Types.ObjectId(authorId),
+            description: dto.description || undefined,
+            mimeType: uploadResult.mimeType,
+            size: uploadResult.size,
+            status: 'processing',
+            processingJob: {
+              stagingKey,
+              ownerId: authorId,
+              mimeType: file.mimetype,
+              enqueued: false,
+            },
+          });
+          multimediaIdCreated = createdMultimediaDoc._id;
+
+          createdPostDoc = await this.feedModel.create({
+            description: dto.description,
+            type: dto.type,
+            author: new Types.ObjectId(authorId),
+            authorFirstName: actor.firstName || undefined,
+            authorLastName: actor.lastName || undefined,
+            multimediaId: createdMultimediaDoc._id,
+            multimediaUrl: uploadResult.url,
+            thumbnailUrl: createdMultimediaDoc.thumbnailUrl || undefined,
+            multimediaStatus: createdMultimediaDoc.status || 'processing',
+            likesCount: 0,
+            commentsCount: 0,
+          });
+
+          // link multimedia -> post
+          await this.multimediaModel.updateOne({ _id: createdMultimediaDoc._id }, { $set: { message: createdPostDoc._id, status: 'processing', url: uploadResult.url } }).exec();
+
+          createdPostId = createdPostDoc._id?.toString();
+        } catch (nonTxErr) {
+          // cleanup created docs and uploaded file if possible
+          try { if (createdMultimediaDoc && createdMultimediaDoc._id) await this.multimediaModel.deleteOne({ _id: createdMultimediaDoc._id }).exec(); } catch(_){}
+          try { if (createdPostDoc && createdPostDoc._id) await this.feedModel.deleteOne({ _id: createdPostDoc._id }).exec(); } catch(_){}
+          try { await this.storage.delete(uploadResult.key) } catch (_) {}
+          throw nonTxErr;
+        }
+      }
+    } catch (err) {
+      // compensating: delete uploaded file to avoid orphan if nothing was committed
+      try { await this.storage.delete(uploadResult.key) } catch (_) {}
+      throw err;
+    } finally {
+      try { session.endSession(); } catch(_){}
+    }
+
+    if (!createdPostId) throw new Error('Failed to create post');
+
+    // Try to enqueue the processing job. If enqueue fails, the multimedia doc contains
+    // `processingJob` so a background reconciler can pick it up (basic outbox).
+    try {
+      await this.multimediaQueue.add('process', {
+        stagingKey: uploadResult.key,
+        multimediaId: multimediaIdCreated?.toString(),
+        messageId: createdPostId,
+        ownerId: authorId,
+        mimeType: file.mimetype,
+      });
+
+      // mark as enqueued
+      try {
+        await this.multimediaModel.updateOne({ _id: multimediaIdCreated }, { $set: { 'processingJob.enqueued': true } }).exec();
+      } catch (_) {}
+    } catch (err) {
+      // leave processingJob.enqueued = false so a background reconciler can find it
+    }
+
+    const out = await this.buildPostOutput(createdPostId);
     this.eventEmitter.emit('post.created', out);
     return out;
   }
@@ -224,29 +385,64 @@ export class FeedAndMultimediaService implements OnModuleInit {
     const id = new Types.ObjectId(userId);
     const posts = await this.feedModel
       .find({ author: id })
-      .select('_id description type author multimediaId likes shares views createdAt updatedAt')
+      .select(`
+        _id description type author
+        authorFirstName authorLastName
+        multimediaId multimediaUrl thumbnailUrl multimediaStatus
+        likesCount commentsCount
+        shares views createdAt updatedAt
+      `)
       .sort({ createdAt: -1 })
       .lean()
       .exec();
 
-    // populate multimedia URLs where available
-    const multimediaIds = posts.filter((p: any) => p.multimediaId).map((p: any) => p.multimediaId.toString());
-    const multimediaMap: Map<string, any> = new Map();
-    if (multimediaIds.length > 0) {
-      const uniq = Array.from(new Set(multimediaIds));
-      const mDocs = await this.multimediaModel.find({ _id: { $in: uniq } }).select('_id url thumbnailUrl status').lean().exec();
-      for (const m of mDocs) multimediaMap.set(m._id?.toString(), m);
-    }
+    // Posts now contain denormalized multimediaUrl/thumbnailUrl/status; avoid extra queries
+    return posts.map((doc: any) => ({
+      _id: doc._id,
+      description: doc.description,
+      type: doc.type,
+      author: doc.author?.toString(),
+      authorFirstName: doc.authorFirstName || undefined,
+      authorLastName: doc.authorLastName || undefined,
+      multimediaId: doc.multimediaId,
+      multimediaUrl: doc.multimediaUrl || undefined,
+      thumbnailUrl: doc.thumbnailUrl || undefined,
+      likesCount: typeof doc.likesCount === 'number' ? doc.likesCount : (Array.isArray(doc.likes) ? doc.likes.length : 0),
+      shares: doc.shares || 0,
+      views: doc.views || 0,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    }));
+  }
+
+  // Public/global feed: return recent posts visible to any authenticated user
+  async getFeed(limit = 50) {
+    const posts = await this.feedModel
+      .find({})
+      .select(`
+        _id description type author
+        authorFirstName authorLastName
+        multimediaId multimediaUrl thumbnailUrl multimediaStatus
+        likesCount commentsCount
+        shares views createdAt updatedAt
+      `)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
 
     return posts.map((doc: any) => ({
       _id: doc._id,
       description: doc.description,
       type: doc.type,
       author: doc.author?.toString(),
+      authorFirstName: doc.authorFirstName || undefined,
+      authorLastName: doc.authorLastName || undefined,
       multimediaId: doc.multimediaId,
-      multimediaUrl: multimediaMap.get(doc.multimediaId?.toString())?.url || undefined,
-      thumbnailUrl: multimediaMap.get(doc.multimediaId?.toString())?.thumbnailUrl || undefined,
-      likesCount: Array.isArray(doc.likes) ? doc.likes.length : 0,
+      multimediaUrl: doc.multimediaUrl || undefined,
+      thumbnailUrl: doc.thumbnailUrl || undefined,
+      likesCount: typeof doc.likesCount === 'number' ? doc.likesCount : (Array.isArray(doc.likes) ? doc.likes.length : 0),
+      commentsCount: typeof doc.commentsCount === 'number' ? doc.commentsCount : 0,
       shares: doc.shares || 0,
       views: doc.views || 0,
       createdAt: doc.createdAt,
@@ -255,37 +451,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
   }
 
   async getPostById(postId: string) {
-    if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
-    const post = await this.feedModel.findById(postId).lean().exec();
-    if (!post) throw new NotFoundException('Post not found');
-
-    // fetch multimedia doc if present
-    let multimediaDoc: any = undefined;
-    if (post.multimediaId) {
-      try {
-        multimediaDoc = await this.multimediaModel.findById(post.multimediaId).select('_id url thumbnailUrl mimeType size width height duration status').lean().exec();
-      } catch (_) { multimediaDoc = undefined }
-    }
-
-    let commentsCount = 0
-    try { commentsCount = await this.commentModel.countDocuments({ post: post._id }).exec() } catch (_) { commentsCount = 0 }
-
-    return {
-      _id: post._id?.toString(),
-      description: post.description,
-      type: post.type,
-      author: post.author?.toString(),
-      multimediaId: post.multimediaId,
-      multimediaUrl: multimediaDoc?.url || undefined,
-      thumbnailUrl: multimediaDoc?.thumbnailUrl || undefined,
-      multimedia: multimediaDoc || undefined,
-      likesCount: Array.isArray(post.likes) ? post.likes.length : 0,
-      commentsCount,
-      shares: post.shares || 0,
-      views: post.views || 0,
-      createdAt: (post as any).createdAt,
-      updatedAt: (post as any).updatedAt,
-    }
+    return await this.buildPostOutput(postId);
   }
 
   async updatePost(postId: string, data: Partial<CreatePostDto>, actorId: string) {
@@ -294,54 +460,55 @@ export class FeedAndMultimediaService implements OnModuleInit {
     if (!post) throw new NotFoundException('Post not found');
     if (post.author.toString() !== actorId) throw new ForbiddenException('Not allowed');
 
-    if (data.description !== undefined) post.description = data.description as any;
-    if (data.type !== undefined) post.type = data.type as any;
-    if ((data as any).multimediaId !== undefined) post.multimediaId = (data as any).multimediaId ? new Types.ObjectId((data as any).multimediaId) : undefined;
+    const update: any = {};
+    if (data.description !== undefined) update.description = data.description as any;
+    if (data.type !== undefined) update.type = data.type as any;
+    if ((data as any).multimediaId !== undefined) update.multimediaId = (data as any).multimediaId ? new Types.ObjectId((data as any).multimediaId) : undefined;
 
-    await post.save();
-    // attach multimedia urls and comments count for consistency with other endpoints
-    let multimediaUrl: string | undefined = undefined
-    let thumbnailUrl: string | undefined = undefined
-    if (post.multimediaId) {
-      try {
-        const m = await this.multimediaModel.findById(post.multimediaId).select('_id url thumbnailUrl status').lean().exec()
-        if (m) {
-          multimediaUrl = m.url
-          thumbnailUrl = m.thumbnailUrl
-        }
-      } catch (_) {}
+    if (Object.keys(update).length > 0) {
+      await this.feedModel.updateOne({ _id: postId }, { $set: update }).exec();
     }
 
-    let commentsCount = 0
-    try { commentsCount = await this.commentModel.countDocuments({ post: post._id }).exec() } catch (_) {}
-
-    const out = {
-      _id: post._id?.toString(),
-      description: post.description,
-      type: post.type,
-      author: post.author?.toString(),
-      multimediaId: post.multimediaId,
-      multimediaUrl,
-      thumbnailUrl,
-      likesCount: Array.isArray((post as any).likes) ? (post as any).likes.length : 0,
-      commentsCount,
-      shares: (post as any).shares || 0,
-      views: (post as any).views || 0,
-      createdAt: (post as any).createdAt,
-      updatedAt: (post as any).updatedAt,
-    };
-
+    const out = await this.buildPostOutput(postId);
     this.eventEmitter.emit('post.updated', out);
     return out;
   }
 
   async deletePost(postId: string, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
-    const post = await this.feedModel.findById(postId).exec();
+    const post = await this.feedModel.findById(postId).lean().exec();
     if (!post) throw new NotFoundException('Post not found');
-    if (post.author.toString() !== actorId) throw new ForbiddenException('Not allowed');
+    if (post.author?.toString() !== actorId) throw new ForbiddenException('Not allowed');
 
-    await this.feedModel.findByIdAndDelete(postId).exec();
+    // transactionally remove post, comments and multimedia doc; remove storage file after commit
+    const session = await this.feedModel.db.startSession();
+    let multimediaDoc: any = undefined;
+    try {
+      await session.withTransaction(async () => {
+        // load multimedia doc within transaction if exists
+        if (post.multimediaId) {
+          multimediaDoc = await this.multimediaModel.findById(post.multimediaId).session(session).lean().exec();
+          if (multimediaDoc) {
+            await this.multimediaModel.deleteOne({ _id: multimediaDoc._id }).session(session).exec();
+          }
+        }
+
+        // delete comments
+        await this.commentModel.deleteMany({ post: new Types.ObjectId(postId) }).session(session).exec();
+
+        // delete post
+        await this.feedModel.deleteOne({ _id: new Types.ObjectId(postId) }).session(session).exec();
+      });
+    } finally {
+      session.endSession();
+    }
+
+    // best-effort remove storage asset(s) outside transaction
+    try {
+      const key = multimediaDoc?.processingJob?.stagingKey;
+      if (key) await this.storage.delete(key);
+    } catch (_) {}
+
     this.eventEmitter.emit('post.deleted', { _id: postId, author: actorId });
     return { success: true };
   }
@@ -349,22 +516,68 @@ export class FeedAndMultimediaService implements OnModuleInit {
   // Comments
   async addComment(dto: CreateCommentDto, authorId: string) {
     if (!authorId || !Types.ObjectId.isValid(authorId)) throw new BadRequestException('Invalid author');
-    const author = await this.userService.getUserById(dto.authorId);
+    const author = await this.userService.getUserById(authorId);
     if (!author) throw new NotFoundException('Author not found');
 
     const post = await this.feedModel.findById(dto.postId).exec();
     if (!post) throw new NotFoundException('Post not found');
 
-    const created = await this.commentModel.create({
-      content: dto.content,
-      author: new Types.ObjectId(authorId),
-      post: new Types.ObjectId(dto.postId),
-    });
+    // Attempt transactional path, but fall back for standalone Mongo servers that don't support transactions
+    const session = await this.commentModel.db.startSession();
+    let created: any = undefined;
+    let usedTransaction = false;
+    try {
+      try {
+        await session.withTransaction(async () => {
+          const docs = await this.commentModel.create([
+            {
+              content: dto.content,
+              author: new Types.ObjectId(authorId),
+              post: new Types.ObjectId(dto.postId),
+            },
+          ], { session });
+          created = Array.isArray(docs) ? docs[0] : docs;
+
+          await this.feedModel.updateOne({ _id: dto.postId }, { $inc: { commentsCount: 1 } }, { session }).exec();
+        });
+        usedTransaction = true;
+      } catch (txErr) {
+        const msg = String(txErr?.message || '').toLowerCase();
+        if (msg.includes('transaction numbers are only allowed') || msg.includes('transactions are not supported')) {
+          // fallback to non-transactional flow below
+        } else {
+          throw txErr;
+        }
+      }
+
+      if (!usedTransaction) {
+        // Non-transactional fallback: create comment then increment counter; if increment fails, remove comment
+        created = await this.commentModel.create({ content: dto.content, author: new Types.ObjectId(authorId), post: new Types.ObjectId(dto.postId) });
+        try {
+          const upd = await this.feedModel.updateOne({ _id: dto.postId }, { $inc: { commentsCount: 1 } }).exec();
+          if (upd.matchedCount === 0) {
+            // rollback
+            try { await this.commentModel.deleteOne({ _id: created._id }).exec(); } catch (_) {}
+            throw new Error('Post not found when incrementing commentsCount');
+          }
+        } catch (incErr) {
+          try { await this.commentModel.deleteOne({ _id: created._id }).exec(); } catch (_) {}
+          throw incErr;
+        }
+      }
+    } finally {
+      try { session.endSession(); } catch (_) {}
+    }
+
+    // attach author names using a single query
+    const userDoc: any = await this.userModel.findById(created.author).select('firstName lastName').lean().exec().catch(() => undefined);
 
     const out = {
       _id: created._id?.toString(),
       content: created.content,
       author: created.author?.toString(),
+      authorFirstName: userDoc?.firstName || undefined,
+      authorLastName: userDoc?.lastName || undefined,
       post: created.post?.toString(),
       createdAt: (created as any).createdAt,
     };
@@ -372,6 +585,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
     this.eventEmitter.emit('comment.created', out);
     return out;
   }
+
+
 
   async getCommentsForPost(postId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
@@ -382,16 +597,26 @@ export class FeedAndMultimediaService implements OnModuleInit {
       .lean()
       .exec();
 
+    // Batch load all author user docs to avoid N+1
+    const authorIds = Array.from(new Set(comments.filter((c:any) => c.author).map((c:any) => c.author.toString())));
+    const users: any[] = authorIds.length > 0 ? await this.userModel.find({ _id: { $in: authorIds } }).select('firstName lastName').lean().exec() : [];
+    const userMap = new Map(users.map(u => [u._id?.toString(), u]));
+
     return comments.map((c: any) => ({
       _id: c._id,
       content: c.content,
       author: c.author?.toString(),
+      authorFirstName: userMap.get(c.author?.toString())?.firstName || undefined,
+      authorLastName: userMap.get(c.author?.toString())?.lastName || undefined,
       post: c.post?.toString(),
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
     }));
   }
 
+
+
+  
   async deleteComment(commentId: string, actorId: string) {
     if (!commentId || !Types.ObjectId.isValid(commentId)) throw new BadRequestException('Invalid comment id');
     const comment = await this.commentModel.findById(commentId).exec();
@@ -399,6 +624,14 @@ export class FeedAndMultimediaService implements OnModuleInit {
     if (comment.author.toString() !== actorId) throw new ForbiddenException('Not allowed');
 
     await this.commentModel.findByIdAndDelete(commentId).exec();
+
+    // decrement denormalized commentsCount on post (best-effort)
+    try {
+      await this.feedModel.updateOne({ _id: comment.post }, { $inc: { commentsCount: -1 } }).exec();
+    } catch (err) {
+      console.warn('Failed to decrement commentsCount for post on comment delete', err);
+    }
+
     this.eventEmitter.emit('comment.deleted', { _id: commentId, post: comment.post?.toString() });
     return { success: true };
   }
@@ -407,36 +640,34 @@ export class FeedAndMultimediaService implements OnModuleInit {
   async likePost(postId: string, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     if (!actorId || !Types.ObjectId.isValid(actorId)) throw new BadRequestException('Invalid actor id');
-    const post = await this.feedModel.findById(postId).exec();
-    if (!post) throw new NotFoundException('Post not found');
+    // Use aggregation-style update pipeline to atomically add actor to likes and recalc likesCount
+    const oid = new Types.ObjectId(actorId);
+    const pipeline: any[] = [
+      { $set: { likes: { $setUnion: ['$likes', [oid]] } } },
+      { $set: { likesCount: { $size: '$likes' } } },
+    ];
 
-    const actorObj = new Types.ObjectId(actorId);
-    const exists = Array.isArray((post as any).likes) && (post as any).likes.find((l: any) => l.toString() === actorId);
-    if (!exists) {
-      (post as any).likes = (post as any).likes || [];
-      (post as any).likes.push(actorObj);
-      await post.save();
-    }
-
-    const multimediaDoc = post.multimediaId ? await this.multimediaModel.findById(post.multimediaId).select('_id url thumbnailUrl mimeType size width height duration status').lean().exec() : undefined;
-    let commentsCount = 0
-    try { commentsCount = await this.commentModel.countDocuments({ post: post._id }).exec() } catch (_) { commentsCount = 0 }
+    // Perform findOneAndUpdate and return the post after modification to avoid a second read
+    const updated = await this.feedModel.findOneAndUpdate({ _id: postId } as any, pipeline as any, { returnDocument: 'after', lean: true }).exec();
+    if (!updated) throw new NotFoundException('Post not found');
 
     const out = {
-      _id: post._id?.toString(),
-      description: post.description,
-      type: post.type,
-      author: post.author?.toString(),
-      multimediaId: post.multimediaId,
-      multimediaUrl: multimediaDoc?.url || undefined,
-      thumbnailUrl: multimediaDoc?.thumbnailUrl || undefined,
-      multimedia: multimediaDoc || undefined,
-      likesCount: Array.isArray((post as any).likes) ? (post as any).likes.length : 0,
-      commentsCount,
-      shares: (post as any).shares || 0,
-      views: (post as any).views || 0,
-      createdAt: (post as any).createdAt,
-      updatedAt: (post as any).updatedAt,
+      _id: updated._id?.toString(),
+      description: updated.description,
+      type: updated.type,
+      author: updated.author?.toString(),
+      authorFirstName: (updated as any).authorFirstName || undefined,
+      authorLastName: (updated as any).authorLastName || undefined,
+      multimediaId: (updated as any).multimediaId,
+      multimediaUrl: (updated as any).multimediaUrl || undefined,
+      thumbnailUrl: (updated as any).thumbnailUrl || undefined,
+      multimedia: undefined,
+      likesCount: typeof (updated as any).likesCount === 'number' ? (updated as any).likesCount : (Array.isArray(updated.likes) ? updated.likes.length : 0),
+      commentsCount: typeof (updated as any).commentsCount === 'number' ? (updated as any).commentsCount : 0,
+      shares: updated.shares || 0,
+      views: updated.views || 0,
+      createdAt: (updated as any).createdAt,
+      updatedAt: (updated as any).updatedAt,
     };
 
     this.eventEmitter.emit('post.updated', out);
@@ -446,34 +677,32 @@ export class FeedAndMultimediaService implements OnModuleInit {
   async unlikePost(postId: string, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     if (!actorId || !Types.ObjectId.isValid(actorId)) throw new BadRequestException('Invalid actor id');
-    const post = await this.feedModel.findById(postId).exec();
-    if (!post) throw new NotFoundException('Post not found');
+    const oid = new Types.ObjectId(actorId);
+    const pipeline: any[] = [
+      { $set: { likes: { $filter: { input: '$likes', as: 'u', cond: { $ne: ['$$u', oid] } } } } },
+      { $set: { likesCount: { $size: '$likes' } } },
+    ];
 
-    (post as any).likes = (post as any).likes || [];
-    const before = (post as any).likes.length;
-    (post as any).likes = (post as any).likes.filter((l: any) => l.toString() !== actorId);
-    if ((post as any).likes.length !== before) {
-      await post.save();
-    }
-
-    const multimediaDoc = post.multimediaId ? await this.multimediaModel.findById(post.multimediaId).select('_id url thumbnailUrl mimeType size width height duration status').lean().exec() : undefined;
-    let commentsCount = 0
-    try { commentsCount = await this.commentModel.countDocuments({ post: post._id }).exec() } catch (_) { commentsCount = 0 }
+    const updated = await this.feedModel.findOneAndUpdate({ _id: postId } as any, pipeline as any, { returnDocument: 'after', lean: true }).exec();
+    if (!updated) throw new NotFoundException('Post not found');
 
     const out = {
-      _id: post._id?.toString(),
-      description: post.description,
-      type: post.type,
-      author: post.author?.toString(),
-      multimediaId: post.multimediaId,
-      multimediaUrl: multimediaDoc?.url || undefined,
-      thumbnailUrl: multimediaDoc?.thumbnailUrl || undefined,
-      multimedia: multimediaDoc || undefined,
-      likesCount: Array.isArray((post as any).likes) ? (post as any).likes.length : 0,
-      commentsCount,
-      shares: (post as any).shares || 0,
-      createdAt: (post as any).createdAt,
-      updatedAt: (post as any).updatedAt,
+      _id: updated._id?.toString(),
+      description: updated.description,
+      type: updated.type,
+      author: updated.author?.toString(),
+      authorFirstName: (updated as any).authorFirstName || undefined,
+      authorLastName: (updated as any).authorLastName || undefined,
+      multimediaId: (updated as any).multimediaId,
+      multimediaUrl: (updated as any).multimediaUrl || undefined,
+      thumbnailUrl: (updated as any).thumbnailUrl || undefined,
+      multimedia: undefined,
+      likesCount: typeof (updated as any).likesCount === 'number' ? (updated as any).likesCount : (Array.isArray(updated.likes) ? updated.likes.length : 0),
+      commentsCount: typeof (updated as any).commentsCount === 'number' ? (updated as any).commentsCount : 0,
+      shares: updated.shares || 0,
+      views: updated.views || 0,
+      createdAt: (updated as any).createdAt,
+      updatedAt: (updated as any).updatedAt,
     };
 
     this.eventEmitter.emit('post.updated', out);
@@ -482,31 +711,25 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
   async incrementView(postId: string, actorId?: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
-    const post = await this.feedModel.findById(postId).exec();
-    if (!post) throw new NotFoundException('Post not found');
-
-    (post as any).views = ((post as any).views || 0) + 1;
-    await post.save();
-
-    const multimediaDoc = post.multimediaId ? await this.multimediaModel.findById(post.multimediaId).select('_id url thumbnailUrl mimeType size width height duration status').lean().exec() : undefined;
-    let commentsCount = 0
-    try { commentsCount = await this.commentModel.countDocuments({ post: post._id }).exec() } catch (_) { commentsCount = 0 }
+    const updated = await this.feedModel.findOneAndUpdate({ _id: postId } as any, { $inc: { views: 1 } } as any, { returnDocument: 'after', lean: true }).exec();
+    if (!updated) throw new NotFoundException('Post not found');
 
     const out = {
-      _id: post._id?.toString(),
-      description: post.description,
-      type: post.type,
-      author: post.author?.toString(),
-      multimediaId: post.multimediaId,
-      multimediaUrl: multimediaDoc?.url || undefined,
-      thumbnailUrl: multimediaDoc?.thumbnailUrl || undefined,
-      multimedia: multimediaDoc || undefined,
-      likesCount: Array.isArray((post as any).likes) ? (post as any).likes.length : 0,
-      commentsCount,
-      shares: (post as any).shares || 0,
-      views: (post as any).views || 0,
-      createdAt: (post as any).createdAt,
-      updatedAt: (post as any).updatedAt,
+      _id: updated._id?.toString(),
+      description: updated.description,
+      type: updated.type,
+      author: updated.author?.toString(),
+      authorFirstName: (updated as any).authorFirstName || undefined,
+      authorLastName: (updated as any).authorLastName || undefined,
+      multimediaId: (updated as any).multimediaId,
+      multimediaUrl: (updated as any).multimediaUrl || undefined,
+      thumbnailUrl: (updated as any).thumbnailUrl || undefined,
+      likesCount: typeof (updated as any).likesCount === 'number' ? (updated as any).likesCount : (Array.isArray(updated.likes) ? updated.likes.length : 0),
+      commentsCount: typeof (updated as any).commentsCount === 'number' ? (updated as any).commentsCount : 0,
+      shares: updated.shares || 0,
+      views: updated.views || 0,
+      createdAt: (updated as any).createdAt,
+      updatedAt: (updated as any).updatedAt,
     };
 
     this.eventEmitter.emit('post.updated', out);

@@ -12,8 +12,29 @@ export default function useFeedAndMultimedia() {
 
 	const mergePosts = (existing = [], incoming = []) => {
 		const map = new Map()
-		;(incoming || []).forEach((p) => { if (p && p._id) map.set(p._id, p) })
-		;(existing || []).forEach((p) => { if (p && p._id && !map.has(p._id)) map.set(p._id, p) })
+		// insert incoming first, but merge with existing to preserve media/author fields if missing
+		;(incoming || []).forEach((p) => {
+			if (!p || !p._id) return
+			map.set(p._id, p)
+		})
+		;(existing || []).forEach((p) => {
+			if (!p || !p._id) return
+			if (!map.has(p._id)) {
+				map.set(p._id, p)
+			} else {
+				// merge: prefer incoming values, but keep multimedia/author fields from existing if incoming lacks them
+				const inc = map.get(p._id) || {}
+				const merged = Object.assign({}, inc)
+				if (!inc.multimediaUrl && p.multimediaUrl) merged.multimediaUrl = p.multimediaUrl
+				if (!inc.thumbnailUrl && p.thumbnailUrl) merged.thumbnailUrl = p.thumbnailUrl
+				if (!inc.multimedia && p.multimedia) merged.multimedia = p.multimedia
+				if (!inc.authorFirstName && p.authorFirstName) merged.authorFirstName = p.authorFirstName
+				if (!inc.authorLastName && p.authorLastName) merged.authorLastName = p.authorLastName
+				if ((inc.likesCount === undefined || inc.likesCount === null) && (p.likesCount !== undefined)) merged.likesCount = p.likesCount
+				if ((inc.commentsCount === undefined || inc.commentsCount === null) && (p.commentsCount !== undefined)) merged.commentsCount = p.commentsCount
+				map.set(p._id, merged)
+			}
+		})
 		const arr = Array.from(map.values())
 		arr.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
 		return arr
@@ -23,11 +44,11 @@ export default function useFeedAndMultimedia() {
 		try { return err?.response?.data?.message || err?.message || JSON.stringify(err) } catch (_) { return String(err) }
 	}
 
-	const loadMyPosts = useCallback(async () => {
+	const loadMyPosts = useCallback(async (limit = 50) => {
 		setLoading(true)
 		setError(null)
 		try {
-			const res = await feedService.getMyPosts()
+			const res = await feedService.getFeed(limit)
 			setPosts(res.data || [])
 		} catch (err) {
 			setError(err)

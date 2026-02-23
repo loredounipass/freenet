@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { mediaBase, apiOrigin } from '../../api/http'
-import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
 
-export default function FeedItem({ post }) {
-  const { likePost, unlikePost, addComment, joinPost, viewPost, getComments } = useFeedAndMultimedia()
+export default function FeedItem({ post, actions = {} }) {
+  const { likePost, unlikePost, addComment, joinPost, viewPost, getComments } = actions
   const [liked, setLiked] = useState(false)
   const [localLikes, setLocalLikes] = useState(post ? (post.likesCount || 0) : 0)
   const [showComment, setShowComment] = useState(false)
@@ -39,7 +38,7 @@ export default function FeedItem({ post }) {
   useEffect(() => {
     if (!showComment) return
     let mounted = true
-    joinPost(post._id)
+    if (typeof joinPost === 'function') joinPost(post._id)
     const load = async () => {
       setLoadingComments(true)
       try {
@@ -53,7 +52,7 @@ export default function FeedItem({ post }) {
   }, [showComment, post, joinPost, getComments])
 
   if (!post) return null
-  const { description, multimedia, author, createdAt, thumbnailUrl, multimediaUrl, commentsCount, views } = post
+  const { description, multimedia, author, authorFirstName, authorLastName, createdAt, thumbnailUrl, multimediaUrl, commentsCount, views } = post
 
   // prefer provided multimediaUrl or thumbnailUrl
   const meta = post.multimedia || {}
@@ -80,7 +79,7 @@ export default function FeedItem({ post }) {
     <div className="fb-card mb-4">
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <div className="fb-author">{author?.username || 'Usuario'}</div>
+            <div className="fb-author">{(authorFirstName || authorLastName) ? `${authorFirstName || ''} ${authorLastName || ''}`.trim() : (author?.username || 'Usuario')}</div>
           <div className="fb-time">{createdAt ? new Date(createdAt).toLocaleString() : ''}</div>
         </div>
         <div className="fb-desc">{description}</div>
@@ -132,7 +131,7 @@ export default function FeedItem({ post }) {
             {!loadingComments && comments && comments.length === 0 && <div className="text-sm text-gray-500">No hay comentarios aún.</div>}
             {!loadingComments && comments && comments.map(c => (
               <div key={c._id} className="mb-2 border-b pb-2">
-                <div className="text-sm font-semibold">{c.author}</div>
+                <div className="text-sm font-semibold">{(c.authorFirstName || c.authorLastName) ? `${c.authorFirstName || ''} ${c.authorLastName || ''}`.trim() : (c.author || 'Usuario')}</div>
                 <div className="text-sm">{c.content}</div>
                 <div className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
               </div>

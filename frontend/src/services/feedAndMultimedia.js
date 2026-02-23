@@ -1,4 +1,4 @@
-import { get, post, postMultipart, del, feedApi, feedUploadApi, myFeedApi, feedCommentsApi, feedLikesApi, feedViewsApi } from '../api/http'
+import { get, getFeed as apiGetFeed, post, postMultipart, del, feedApi, feedUploadApi, feedCommentsApi, feedLikesApi, feedViewsApi } from '../api/http'
 
 export async function createPost(dto) {
   return await post(feedApi, dto)
@@ -13,8 +13,10 @@ export async function createPostWithFile({ file, description = '', type = 'image
   return await postMultipart(feedUploadApi, form)
 }
 
-export async function getMyPosts() {
-  return await get(myFeedApi)
+// legacy: getMyPosts removed (use getFeed)
+
+export async function getFeed(limit = 50) {
+  return await apiGetFeed({ limit })
 }
 
 export async function getPostById(id) {
@@ -49,7 +51,7 @@ export async function viewPost(postId) {
 const feedService = {
   createPost,
   createPostWithFile,
-  getMyPosts,
+  getFeed,
   getPostById,
   addComment,
   likePost,

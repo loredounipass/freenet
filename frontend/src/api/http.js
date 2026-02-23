@@ -36,7 +36,6 @@ const myMessagesApi = `${baseApi}/messages/me`
 // feed endpoints
 const feedApi = `${baseApi}/feed`
 const feedUploadApi = `${baseApi}/feed/upload`
-const myFeedApi = `${baseApi}/feed/me`
 
 // builders for feed sub-resources
 const feedCommentsApi = (postId) => `${feedApi}/${postId}/comments`
@@ -74,18 +73,23 @@ async function del(url, config = {}) {
     return await axios.delete(url, config)
 }
 
+// Convenience wrapper for global feed retrieval
+async function getFeed(params = {}, config = {}) {
+    return await get(feedApi, params, config)
+}
+
 export {
     get,
     post,
     postMultipart,
     patch,
     del,
+    getFeed,
     messagesApi,
     messagesUploadApi,
     myMessagesApi,
     feedApi,
     feedUploadApi,
-    myFeedApi,
     feedCommentsApi,
     feedLikesApi,
     feedViewsApi,

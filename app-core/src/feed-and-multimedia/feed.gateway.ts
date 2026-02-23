@@ -88,11 +88,29 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @OnEvent('post.created')
   async handlePostCreated(payload: any) {
     try {
-      // emit to author's sockets and any post-specific room
+      // emit sanitized post payload to author's sockets and any post-specific room
       const authorId = payload.author;
       if (!authorId) return;
+      const out = {
+        _id: payload._id,
+        description: payload.description,
+        type: payload.type,
+        author: payload.author,
+        authorFirstName: payload.authorFirstName || undefined,
+        authorLastName: payload.authorLastName || undefined,
+        multimediaId: payload.multimediaId || undefined,
+        multimediaUrl: payload.multimediaUrl || undefined,
+        thumbnailUrl: payload.thumbnailUrl || undefined,
+        likesCount: typeof payload.likesCount === 'number' ? payload.likesCount : undefined,
+        commentsCount: typeof payload.commentsCount === 'number' ? payload.commentsCount : undefined,
+        shares: payload.shares || 0,
+        views: payload.views || 0,
+        createdAt: payload.createdAt,
+        updatedAt: payload.updatedAt,
+      };
+
       const authorSockets = await this.server.in(`user:${authorId}`).allSockets();
-      for (const s of authorSockets) this.server.to(s).emit('postCreated', payload);
+      for (const s of authorSockets) this.server.to(s).emit('postCreated', out);
     } catch (e) {
       this.logger.warn(`Error emitting post.created: ${e}`);
     }
@@ -103,14 +121,33 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const authorId = payload.author;
       if (!authorId) return;
+
+      const out = {
+        _id: payload._id,
+        description: payload.description,
+        type: payload.type,
+        author: payload.author,
+        authorFirstName: payload.authorFirstName || undefined,
+        authorLastName: payload.authorLastName || undefined,
+        multimediaId: payload.multimediaId || undefined,
+        multimediaUrl: payload.multimediaUrl || undefined,
+        thumbnailUrl: payload.thumbnailUrl || undefined,
+        likesCount: typeof payload.likesCount === 'number' ? payload.likesCount : undefined,
+        commentsCount: typeof payload.commentsCount === 'number' ? payload.commentsCount : undefined,
+        shares: payload.shares || 0,
+        views: payload.views || 0,
+        createdAt: payload.createdAt,
+        updatedAt: payload.updatedAt,
+      };
+
       const authorSockets = await this.server.in(`user:${authorId}`).allSockets();
-      for (const s of authorSockets) this.server.to(s).emit('postUpdated', payload);
+      for (const s of authorSockets) this.server.to(s).emit('postUpdated', out);
 
       // also notify any post room subscribers
       const postId = payload._id;
       if (postId) {
         const sockets = await this.server.in(`post:${postId}`).allSockets();
-        for (const s of sockets) this.server.to(s).emit('postUpdated', payload);
+        for (const s of sockets) this.server.to(s).emit('postUpdated', out);
       }
     } catch (e) {
       this.logger.warn(`Error emitting post.updated: ${e}`);
@@ -123,13 +160,23 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const postId = payload.post;
       if (!postId) return;
       const postRoom = `post:${postId}`;
+      const out = {
+        _id: payload._id,
+        content: payload.content,
+        author: payload.author,
+        authorFirstName: payload.authorFirstName || undefined,
+        authorLastName: payload.authorLastName || undefined,
+        post: payload.post,
+        createdAt: payload.createdAt,
+      };
+
       const sockets = await this.server.in(postRoom).allSockets();
-      for (const s of sockets) this.server.to(s).emit('commentCreated', payload);
+      for (const s of sockets) this.server.to(s).emit('commentCreated', out);
 
       // also notify the post author via user room if included in payload
       if (payload.author) {
         const authorSockets = await this.server.in(`user:${payload.author}`).allSockets();
-        for (const s of authorSockets) this.server.to(s).emit('commentCreated', payload);
+        for (const s of authorSockets) this.server.to(s).emit('commentCreated', out);
       }
     } catch (e) {
       this.logger.warn(`Error emitting comment.created: ${e}`);
@@ -146,7 +193,20 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('error', { message: 'Missing postId' });
       return;
     }
-    client.join(`post:${payload.postId}`);
-    this.logger.log(`Socket ${client.id} joined post room post:${payload.postId}`);
+    const room = `post:${payload.postId}`;
+    // Avoid duplicate joins/log spam if client already in the room
+    try {
+      const alreadyIn = client.rooms && client.rooms.has && client.rooms.has(room);
+      if (!alreadyIn) {
+        client.join(room);
+        this.logger.log(`Socket ${client.id} joined post room ${room}`);
+      } else {
+        this.logger.debug(`Socket ${client.id} already in post room ${room}`);
+      }
+    } catch (err) {
+      // conservative join in case of unexpected socket structure
+      try { client.join(room) } catch(_){}
+      this.logger.log(`Socket ${client.id} joined post room ${room}`);
+    }
   }
 }

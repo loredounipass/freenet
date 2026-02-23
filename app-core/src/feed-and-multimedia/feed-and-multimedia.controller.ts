@@ -31,10 +31,12 @@ export class FeedAndMultimediaController {
     return this.service.createPostWithFile(file, body, user._id.toString());
   }
 
+  
+
   @UseGuards(AuthenticatedGuard)
-  @Get('me')
-  async getMyPosts(@CurrentUser() user: any) {
-    return this.service.getPostsByUser(user._id.toString());
+  @Get()
+  async getFeed() {
+    return this.service.getFeed();
   }
 
   @UseGuards(AuthenticatedGuard)
