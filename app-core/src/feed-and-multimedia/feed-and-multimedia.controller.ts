@@ -28,23 +28,19 @@ export class FeedAndMultimediaController {
       throw new BadRequestException('Audio uploads are not supported for feed posts');
     }
 
-    const dto: CreatePostDto = {
-      description: body.description || '',
-      type: body.type || ('image' as any),
-      multimediaId: body.multimediaId,
-      authorId: user._id.toString(),
-    } as CreatePostDto;
-
-    // For file uploads, reuse multimedia flow via storage/provider and queue in service if implemented
-    // Here we simply return service.createPost; if you later want to support file upload atomically,
-    // replicate messages-and-multimedia.createMessageWithFile logic.
-    return this.service.createPost(dto, user._id.toString());
+    return this.service.createPostWithFile(file, body, user._id.toString());
   }
 
   @UseGuards(AuthenticatedGuard)
   @Get('me')
   async getMyPosts(@CurrentUser() user: any) {
     return this.service.getPostsByUser(user._id.toString());
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Get(':id')
+  async getPost(@Param('id') id: string) {
+    return this.service.getPostById(id);
   }
 
   // Post update/delete
@@ -82,5 +78,23 @@ export class FeedAndMultimediaController {
   @Delete('comments/:commentId')
   async deleteComment(@Param('commentId') commentId: string, @CurrentUser() user: any) {
     return this.service.deleteComment(commentId, user._id.toString());
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Post(':id/likes')
+  async addLike(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.likePost(id, user._id.toString());
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Delete(':id/likes')
+  async removeLike(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.unlikePost(id, user._id.toString());
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Post(':id/views')
+  async addView(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.incrementView(id, user._id.toString());
   }
 }

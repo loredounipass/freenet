@@ -98,6 +98,25 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @OnEvent('post.updated')
+  async handlePostUpdated(payload: any) {
+    try {
+      const authorId = payload.author;
+      if (!authorId) return;
+      const authorSockets = await this.server.in(`user:${authorId}`).allSockets();
+      for (const s of authorSockets) this.server.to(s).emit('postUpdated', payload);
+
+      // also notify any post room subscribers
+      const postId = payload._id;
+      if (postId) {
+        const sockets = await this.server.in(`post:${postId}`).allSockets();
+        for (const s of sockets) this.server.to(s).emit('postUpdated', payload);
+      }
+    } catch (e) {
+      this.logger.warn(`Error emitting post.updated: ${e}`);
+    }
+  }
+
   @OnEvent('comment.created')
   async handleCommentCreated(payload: any) {
     try {

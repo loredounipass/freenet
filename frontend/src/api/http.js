@@ -38,6 +38,11 @@ const feedApi = `${baseApi}/feed`
 const feedUploadApi = `${baseApi}/feed/upload`
 const myFeedApi = `${baseApi}/feed/me`
 
+// builders for feed sub-resources
+const feedCommentsApi = (postId) => `${feedApi}/${postId}/comments`
+const feedLikesApi = (postId) => `${feedApi}/${postId}/likes`
+const feedViewsApi = (postId) => `${feedApi}/${postId}/views`
+
 // endpoints de búsqueda de usuarios
 const searchUsersApi = `${baseApi}/user/search`
 
@@ -65,17 +70,25 @@ async function patch(url, body) {
     return await axios.patch(url, body)
 }
 
+async function del(url, config = {}) {
+    return await axios.delete(url, config)
+}
+
 export {
     get,
     post,
     postMultipart,
     patch,
+    del,
     messagesApi,
     messagesUploadApi,
     myMessagesApi,
     feedApi,
     feedUploadApi,
     myFeedApi,
+    feedCommentsApi,
+    feedLikesApi,
+    feedViewsApi,
     searchUsersApi,
     loginApi,
     logoutApi,

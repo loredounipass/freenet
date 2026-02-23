@@ -24,6 +24,9 @@ export class FeedPost {
   @Prop({ type: Number, default: 0 })
   shares: number;
 
+  @Prop({ type: Number, default: 0 })
+  views: number;
+
   _id?: string;
 }
 

@@ -64,12 +64,43 @@ export default function useFeedAndMultimedia() {
 
 		socket.on('postCreated', (payload) => {
 			if (!payload || !payload._id) return
-			setPosts(prev => mergePosts(prev, [payload]))
+			// if payload lacks multimedia details, fetch enriched post
+			if (payload.multimediaId && !payload.multimediaUrl && !payload.thumbnailUrl) {
+				try {
+					feedService.getPostById(payload._id).then((res) => {
+						const created = (res && res.data) ? res.data : res
+						setPosts(prev => mergePosts(prev, [created]))
+					}).catch(() => setPosts(prev => mergePosts(prev, [payload])))
+				} catch (_) { setPosts(prev => mergePosts(prev, [payload])) }
+			} else {
+				setPosts(prev => mergePosts(prev, [payload]))
+			}
+		})
+
+		socket.on('commentCreated', (payload) => {
+			if (!payload || !payload.post) return
+			// refresh the related post to update counts
+			try {
+				feedService.getPostById(payload.post).then((res) => {
+					const updated = (res && res.data) ? res.data : res
+					setPosts(prev => mergePosts(prev, [updated]))
+				}).catch(() => {})
+			} catch (_) {}
 		})
 
 		socket.on('postUpdated', (payload) => {
 			if (!payload || !payload._id) return
-			setPosts(prev => mergePosts(prev, [payload]))
+			// prefer server-sent payload, but if it lacks multimedia metadata fetch full post
+			if (payload.multimediaId && !payload.multimediaUrl && !payload.thumbnailUrl) {
+				try {
+					feedService.getPostById(payload._id).then((res) => {
+						const updated = (res && res.data) ? res.data : res
+						setPosts(prev => mergePosts(prev, [updated]))
+					}).catch(() => setPosts(prev => mergePosts(prev, [payload])))
+				} catch (_) { setPosts(prev => mergePosts(prev, [payload])) }
+			} else {
+				setPosts(prev => mergePosts(prev, [payload]))
+			}
 		})
 
 		socket.on('postDeleted', (payload) => {
@@ -121,6 +152,50 @@ export default function useFeedAndMultimedia() {
 		}
 	}
 
+	const addComment = async (postId, content) => {
+		try {
+			const res = await feedService.addComment(postId, content)
+			const created = (res && res.data) ? res.data : res
+			// optimistic: refresh the post to update counts
+			try { const p = await feedService.getPostById(postId); const postObj = p && p.data ? p.data : p; setPosts(prev => mergePosts(prev, [postObj])); } catch(_){}
+			return created
+		} catch (err) { throw err }
+	}
+
+	const likePost = async (postId) => {
+		try {
+			const res = await feedService.likePost(postId)
+			const updated = (res && res.data) ? res.data : res
+			setPosts(prev => mergePosts(prev, [updated]))
+			return updated
+		} catch (err) { throw err }
+	}
+
+	const unlikePost = async (postId) => {
+		try {
+			const res = await feedService.unlikePost(postId)
+			const updated = (res && res.data) ? res.data : res
+			setPosts(prev => mergePosts(prev, [updated]))
+			return updated
+		} catch (err) { throw err }
+	}
+
+	const viewPost = async (postId) => {
+		try {
+			const res = await feedService.viewPost(postId)
+			const updated = (res && res.data) ? res.data : res
+			setPosts(prev => mergePosts(prev, [updated]))
+			return updated
+		} catch (err) { throw err }
+	}
+
+	const getComments = async (postId) => {
+		try {
+			const res = await feedService.getComments(postId)
+			return (res && res.data) ? res.data : res
+		} catch (err) { throw err }
+	}
+
 	return {
 		posts,
 		loading,
@@ -128,5 +203,20 @@ export default function useFeedAndMultimedia() {
 		loadMyPosts,
 		createPost,
 		createPostWithFile,
+		addComment,
+		likePost,
+		unlikePost,
+		joinPost: (postId) => {
+			try {
+				if (!socketRef.current) return
+				if (socketRef.current.connected) {
+					socketRef.current.emit('joinPost', { postId })
+				} else {
+					socketRef.current.once('connect', () => { try { socketRef.current.emit('joinPost', { postId }) } catch(_){} })
+				}
+			} catch (_) {}
+		},
+		viewPost,
+		getComments,
 	}
 }

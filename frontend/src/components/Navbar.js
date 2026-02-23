@@ -34,6 +34,8 @@ function Navbar() {
       navigate('/login');
     } else if (key === 'settings') {
       navigate('/settings');
+    } else if (key === 'profile') {
+      navigate('/profile');
     }
   };
 
@@ -48,6 +50,8 @@ function Navbar() {
     { to: '/feed', label: t('nav.feed') },
     { to: '/live', label: t('nav.live') },
     { to: '/chat', label: t('nav.chat') },
+    { to: '/videos', label: t('nav.videos') },
+    { to: '/discover', label: t('nav.discover') },
   ];
 
   return (
@@ -83,6 +87,7 @@ function Navbar() {
             {menuOpen && (
               <div className="avatar-menu">
                 <div className="greeting">{t('nav.hi', { firstName: auth.firstName })}</div>
+                <button onClick={() => handleMenuAction('profile')}>{t('nav.profile')}</button>
                 <button onClick={() => handleMenuAction('settings')}>{t('nav.settings')}</button>
                 <button onClick={() => handleMenuAction('logout')} className="danger">{t('nav.logout')}</button>
               </div>
@@ -99,6 +104,7 @@ function Navbar() {
                 {n.label}
               </Link>
             ))}
+            <button onClick={() => handleMenuAction('profile')} className="mobile-item">{t('nav.profile')}</button>
             <button onClick={() => handleMenuAction('settings')} className="mobile-item">{t('nav.settings')}</button>
             <button onClick={() => handleMenuAction('logout')} className="mobile-item danger">{t('nav.logout')}</button>
           </div>
