@@ -105,40 +105,32 @@ export default function ChatView() {
     return undefined;
   }, [loading, scrollToBottom]);
 
-  // Fetch other user info and messages on mount
+  // Fetch other user info and messages on mount / when otherUserId changes
   useEffect(() => {
     let mounted = true;
+    const joinedRef = { value: false };
 
     const init = async () => {
       setLoading(true);
       try {
-        // Fetch all messages
+        // Fetch persisted messages
         await fetchMyMessages();
 
-        // Join the chat room via socket
-        if (otherUserId) {
+        // Join chat room ONCE — the socket is already connected (singleton)
+        if (otherUserId && !joinedRef.value) {
+          joinedRef.value = true;
           joinChat(otherUserId);
         }
 
-        // Try to get user info - use search as fallback
+        // Resolve the other user's profile
         try {
           const resp = await User.searchUsers(otherUserId);
           const data = resp?.data;
-          let users = [];
-          if (Array.isArray(data)) {
-            users = data;
-          } else if (data?.data && Array.isArray(data.data)) {
-            users = data.data;
-          }
+          let users = Array.isArray(data) ? data : (data?.data && Array.isArray(data.data) ? data.data : []);
           const found = users.find((u) => u._id === otherUserId);
-          if (mounted && found) {
-            setOtherUser(found);
-          }
-        } catch (err) {
-          // If search fails, we'll show a placeholder
-        }
-      } catch (err) {
-        // Error handled silently
+          if (mounted && found) setOtherUser(found);
+        } catch (_) {}
+      } catch (_) {
       } finally {
         if (mounted) setLoading(false);
       }
@@ -146,11 +138,10 @@ export default function ChatView() {
 
     init();
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otherUserId]);
+
 
   // Send text message
   const handleSendMessage = async (content) => {

@@ -1,16 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  TextField,
-  List,
-  Fab,
-  CircularProgress,
-} from '@mui/material';
-import AddCommentIcon from '@mui/icons-material/AddComment';
-import SearchIcon from '@mui/icons-material/Search';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { AuthContext } from '../../hooks/AuthContext';
 import useMessagesAndMultimedia from '../../hooks/useMessagesAndMultimedia';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +28,6 @@ const buildConversations = (messages, currentUserId) => {
       });
     } else {
       existing.messages.push(msg);
-      // Keep the most recent message as lastMessage
       const existingTime = new Date(existing.lastMessage?.createdAt || 0).getTime();
       const newTime = new Date(msg.createdAt || 0).getTime();
       if (newTime > existingTime) {
@@ -48,7 +36,6 @@ const buildConversations = (messages, currentUserId) => {
     }
   }
 
-  // Sort conversations by last message time (newest first)
   return Array.from(convMap.values()).sort((a, b) => {
     const ta = new Date(a.lastMessage?.createdAt || 0).getTime();
     const tb = new Date(b.lastMessage?.createdAt || 0).getTime();
@@ -72,13 +59,11 @@ export default function ConversationList() {
 
   const currentUserId = auth?._id;
 
-  // Build conversations from messages
   const conversations = useMemo(
     () => buildConversations(messages, currentUserId),
     [messages, currentUserId]
   );
 
-  // Fetch messages on mount
   useEffect(() => {
     let mounted = true;
     const init = async () => {
@@ -86,19 +71,16 @@ export default function ConversationList() {
       try {
         await fetchMyMessages();
       } catch (err) {
-        // Error handled silently
+        // silent
       } finally {
         if (mounted) setLoading(false);
       }
     };
     init();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch user info for each conversation partner
   useEffect(() => {
     const fetchUsers = async () => {
       const unknownIds = conversations
@@ -122,21 +104,17 @@ export default function ConversationList() {
             setUserCache((prev) => ({ ...prev, [uid]: found }));
           }
         } catch (err) {
-          // Skip
+          // skip
         }
       }
     };
 
-    if (conversations.length > 0) {
-      fetchUsers();
-    }
+    if (conversations.length > 0) fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations.length]);
 
-  // Filter conversations by search query
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
-
     const q = searchQuery.toLowerCase();
     return conversations.filter((conv) => {
       const user = userCache[conv.userId];
@@ -147,116 +125,60 @@ export default function ConversationList() {
     });
   }, [conversations, searchQuery, userCache]);
 
-  const handleSelectConversation = (userId) => {
-    navigate(`/chat/${userId}`);
-  };
+  const handleSelectConversation = (userId) => navigate(`/chat/${userId}`);
 
   const handleNewChatUser = (user) => {
-    // Cache the user and navigate to chat
     setUserCache((prev) => ({ ...prev, [user._id]: user }));
     navigate(`/chat/${user._id}`);
   };
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: 'calc(100vh - 120px)',
-        }}
-      >
-        <CircularProgress sx={{ color: '#2186EB' }} />
-      </Box>
+      <div className="conv-list-loading">
+        <div style={{
+          width: 32, height: 32,
+          border: '3px solid rgba(34,193,195,0.2)',
+          borderTopColor: '#22c1c3',
+          borderRadius: '50%',
+          animation: 'fn-spin 0.9s linear infinite',
+        }} />
+      </div>
     );
   }
 
   return (
-    <Box
-      sx={{
-        height: 'calc(100vh - 120px)',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: '#fff',
-        borderRadius: 3,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ px: 2.5, pt: 2.5, pb: 1 }}>
-        <Typography
-          variant="h5"
-          sx={{ fontWeight: 700, color: '#333', mb: 2 }}
-        >
-          {t('chat.title')}
-        </Typography>
+    <>
+      <div className="conv-list-wrapper">
+        {/* Header */}
+        <div className="conv-list-header">
+          <h2 className="conv-list-title">{t('chat.title')}</h2>
 
-        {/* Search bar */}
-        <TextField
-          fullWidth
-          placeholder={t('chat.search_placeholder')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          variant="outlined"
-          size="small"
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ color: '#9E9E9E', mr: 1 }} />,
-            sx: {
-              borderRadius: 3,
-              bgcolor: '#F5F5F5',
-              '& fieldset': { border: 'none' },
-              '&:hover fieldset': { border: 'none' },
-              '&.Mui-focused fieldset': { border: '1px solid #2186EB' },
-            },
-          }}
-        />
-      </Box>
-
-      {/* Conversation list */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-          px: 1,
-          '&::-webkit-scrollbar': { width: 6 },
-          '&::-webkit-scrollbar-thumb': {
-            bgcolor: '#CCC',
-            borderRadius: 3,
-          },
-        }}
-      >
-        {filteredConversations.length === 0 ? (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              py: 6,
-            }}
-          >
-            <ChatBubbleOutlineIcon
-              sx={{ fontSize: 64, color: '#E0E0E0', mb: 2 }}
+          {/* Search */}
+          <div className="conv-search-wrap">
+            <span className="conv-search-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </span>
+            <input
+              className="conv-search-input"
+              placeholder={t('chat.search_placeholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <Typography
-              variant="body1"
-              sx={{ color: '#9E9E9E', textAlign: 'center', mb: 1 }}
-            >
-              {t('chat.no_conversations')}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ color: '#BDBDBD', textAlign: 'center' }}
-            >
-              {t('chat.start_new')}
-            </Typography>
-          </Box>
-        ) : (
-          <List sx={{ pt: 0.5 }}>
-            {filteredConversations.map((conv) => {
+          </div>
+        </div>
+
+        {/* Conversation list */}
+        <div className="conv-list-scroll">
+          {filteredConversations.length === 0 ? (
+            <div className="conv-empty">
+              <div className="conv-empty-icon">💬</div>
+              <div className="conv-empty-title">{t('chat.no_conversations')}</div>
+              <div className="conv-empty-sub">{t('chat.start_new')}</div>
+            </div>
+          ) : (
+            filteredConversations.map((conv) => {
               const user = userCache[conv.userId] || {};
               return (
                 <ConversationItem
@@ -272,34 +194,30 @@ export default function ConversationList() {
                   onClick={() => handleSelectConversation(conv.userId)}
                 />
               );
-            })}
-          </List>
-        )}
-      </Box>
+            })
+          )}
+        </div>
 
-      {/* New chat FAB */}
-      <Fab
-        color="primary"
-        aria-label={t('chat.new_chat')}
-        onClick={() => setNewChatOpen(true)}
-        sx={{
-          position: 'absolute',
-          bottom: 24,
-          right: 24,
-          bgcolor: '#2186EB',
-          '&:hover': { bgcolor: '#1a6fc2' },
-        }}
-      >
-        <AddCommentIcon />
-      </Fab>
+        {/* New chat FAB */}
+        <button
+          className="conv-fab"
+          aria-label={t('chat.new_chat')}
+          onClick={() => setNewChatOpen(true)}
+          title={t('chat.new_chat')}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="12" y1="10" x2="12" y2="14"/><line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </button>
+      </div>
 
-      {/* New chat dialog */}
       <NewChatDialog
         open={newChatOpen}
         onClose={() => setNewChatOpen(false)}
         onSelectUser={handleNewChatUser}
         currentUserId={currentUserId}
       />
-    </Box>
+    </>
   );
 }

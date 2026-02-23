@@ -1,21 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useContext } from 'react'
 import { mediaBase, apiOrigin } from '../../api/http'
+import CommentsPanel from './CommentsPanel'
+import { AuthContext } from '../../hooks/AuthContext'
+
+/* ── helpers ── */
+function initials(name) {
+  if (!name) return '?'
+  const p = name.trim().split(' ')
+  return p.length >= 2
+    ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
+    : name[0].toUpperCase()
+}
 
 export default function FeedItem({ post, actions = {} }) {
   const { likePost, unlikePost, addComment, joinPost, viewPost, getComments } = actions
-  const [liked, setLiked] = useState(false)
-  const [localLikes, setLocalLikes] = useState(post ? (post.likesCount || 0) : 0)
-  const [showComment, setShowComment] = useState(false)
-  const [commentText, setCommentText] = useState('')
-  const [comments, setComments] = useState([])
-  const [loadingComments, setLoadingComments] = useState(false)
+  const { auth } = useContext(AuthContext)
+
+  // Derive initial liked state from post.likes array (contains user IDs)
+  const isLikedByMe = (p) => {
+    if (!p || !auth?._id) return false
+    return Array.isArray(p.likes) && p.likes.some(
+      (id) => String(id) === String(auth._id)
+    )
+  }
+
+  const [liked, setLiked]               = useState(() => isLikedByMe(post))
+  const [localLikes, setLocalLikes]     = useState(post ? (post.likesCount || 0) : 0)
+  const [showComments, setShowComments] = useState(false)
   const containerRef = useRef(null)
-  const [viewed, setViewed] = useState(false)
+  const [viewed, setViewed]             = useState(false)
 
-  
+  // Keep liked/localLikes in sync when post data updates from socket or re-fetch
+  useEffect(() => {
+    setLiked(isLikedByMe(post))
+    setLocalLikes(post?.likesCount || 0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.likes, post?.likesCount, auth?._id])
 
-  
-  
+  /* auto-view on scroll */
   useEffect(() => {
     if (!post || !post._id || typeof window === 'undefined') return
     const el = containerRef.current
@@ -24,37 +46,29 @@ export default function FeedItem({ post, actions = {} }) {
     try {
       obs = new IntersectionObserver((entries) => {
         entries.forEach(e => {
-            if (e.isIntersecting && e.intersectionRatio > 0.25 && !viewed) {
-            try { viewPost(post._id).catch(() => {}) } catch(_){ }
+          if (e.isIntersecting && e.intersectionRatio > 0.25 && !viewed) {
+            try { viewPost(post._id).catch(() => {}) } catch (_) {}
             setViewed(true)
           }
         })
       }, { threshold: [0.25, 0.5, 1] })
       obs.observe(el)
     } catch (_) {}
-    return () => { try { if (obs && el) obs.unobserve(el) } catch(_){} }
+    return () => { try { if (obs && el) obs.unobserve(el) } catch (_) {} }
   }, [post, viewed, viewPost])
 
-  useEffect(() => {
-    if (!showComment) return
-    let mounted = true
-    if (typeof joinPost === 'function') joinPost(post._id)
-    const load = async () => {
-      setLoadingComments(true)
-      try {
-        const data = await getComments(post._id)
-        if (mounted) setComments(Array.isArray(data) ? data : [])
-      } catch (_) { if (mounted) setComments([]) }
-      finally { if (mounted) setLoadingComments(false) }
-    }
-    load()
-    return () => { mounted = false }
-  }, [showComment, post, joinPost, getComments])
-
   if (!post) return null
-  const { description, multimedia, author, authorFirstName, authorLastName, createdAt, thumbnailUrl, multimediaUrl, commentsCount, views } = post
+  const {
+    description, multimedia, author,
+    authorFirstName, authorLastName,
+    createdAt, thumbnailUrl, multimediaUrl,
+    commentsCount, views,
+  } = post
 
-  // prefer provided multimediaUrl or thumbnailUrl
+  const displayName = (authorFirstName || authorLastName)
+    ? `${authorFirstName || ''} ${authorLastName || ''}`.trim()
+    : (author?.username || 'Usuario')
+
   const meta = post.multimedia || {}
   const resolveUrl = (u) => {
     if (!u) return null
@@ -64,101 +78,145 @@ export default function FeedItem({ post, actions = {} }) {
       return u
     } catch (_) { return u }
   }
-  const mediaUrl = resolveUrl(multimediaUrl) || resolveUrl(thumbnailUrl) || (multimedia && multimedia.filename ? `${mediaBase}/${multimedia.filename}` : null)
+  const mediaUrl =
+    resolveUrl(multimediaUrl) ||
+    resolveUrl(thumbnailUrl) ||
+    (multimedia?.filename ? `${mediaBase}/${multimedia.filename}` : null)
 
   const isVideo = (() => {
     if (!mediaUrl) return false
-    if (meta && meta.duration) return true
-    if (multimedia && multimedia.mimetype && multimedia.mimetype.startsWith && multimedia.mimetype.startsWith('video/')) return true
-    try {
-      return !!mediaUrl.match(/\.(mp4|webm|ogg|mov|mkv)(\?|$)/i)
-    } catch (_){ return false }
+    if (meta?.duration) return true
+    if (multimedia?.mimetype?.startsWith('video/')) return true
+    try { return !!mediaUrl.match(/\.(mp4|webm|ogg|mov|mkv)(\?|$)/i) } catch (_) { return false }
   })()
 
+  const timeStr = createdAt
+    ? new Date(createdAt).toLocaleString(undefined, {
+        month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    : ''
+
+  const handleLike = async () => {
+    try {
+      if (!liked) {
+        const res = await likePost(post._id)
+        const u = (res && res.data) ? res.data : res
+        setLocalLikes(u.likesCount || (localLikes + 1))
+        setLiked(true)
+      } else {
+        const res = await unlikePost(post._id)
+        const u = (res && res.data) ? res.data : res
+        setLocalLikes(u.likesCount || Math.max(0, localLikes - 1))
+        setLiked(false)
+      }
+    } catch (_) {}
+  }
+
   return (
-    <div className="fb-card mb-4">
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
-            <div className="fb-author">{(authorFirstName || authorLastName) ? `${authorFirstName || ''} ${authorLastName || ''}`.trim() : (author?.username || 'Usuario')}</div>
-          <div className="fb-time">{createdAt ? new Date(createdAt).toLocaleString() : ''}</div>
+    <>
+      <div className="fb-card mb-4" ref={containerRef}>
+
+        {/* ── Header ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          gap: '0.75rem', padding: '1rem 1.25rem 0.85rem',
+        }}>
+          <div className="fb-avatar">{initials(displayName)}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="fb-author">{displayName}</div>
+            <div className="fb-time">{timeStr}</div>
+          </div>
         </div>
-        <div className="fb-desc">{description}</div>
-      </div>
-      {mediaUrl && (
-        <div className="fb-media" ref={containerRef}>
+
+        {/* ── Description ── */}
+        {description && (
+          <div style={{ padding: '0 1.25rem 1rem' }}>
+            <p className="fb-desc">{description}</p>
+          </div>
+        )}
+
+        {/* ── Media ── */}
+        {mediaUrl && (
+          <div className="fb-media">
             {isVideo ? (
-            <video onPlay={() => { if (!viewed) { try { viewPost(post._id).catch(() => {}) } catch(_){ } setViewed(true) } }} controls className="w-full max-h-96 mx-auto h-auto object-contain" poster={resolveUrl(thumbnailUrl)}>
-              <source src={mediaUrl} type={(multimedia && multimedia.mimetype) || 'video/mp4'} />
-              Tu navegador no soporta la etiqueta de video.
-            </video>
-          ) : (
-            <img src={mediaUrl} alt="media" className="w-full max-h-80 mx-auto h-auto object-contain" />
-          )}
-        </div>
-      )}
-      <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-        <div>
-          {localLikes ? `${localLikes} ${localLikes === 1 ? 'like' : 'likes'}` : '0 likes'}
-        </div>
-        <div>{commentsCount ? `${commentsCount} ${commentsCount === 1 ? 'comentario' : 'comentarios'}` : '0 comentarios'}</div>
-        <div>{(typeof views === 'number' ? views : 0) ? `${views} ${views === 1 ? 'vista' : 'vistas'}` : '0 vistas'}</div>
-      </div>
-      <div className="p-3 flex items-center space-x-3">
-        <button onClick={async () => {
-          try {
-            if (!liked) {
-              const res = await likePost(post._id)
-              const updated = (res && res.data) ? res.data : res
-              setLocalLikes(updated.likesCount || (localLikes + 1))
-              setLiked(true)
-            } else {
-              const res = await unlikePost(post._id)
-              const updated = (res && res.data) ? res.data : res
-              setLocalLikes(updated.likesCount || Math.max(0, localLikes - 1))
-              setLiked(false)
-            }
-          } catch (_) {}
-        }} className="btn-like">
-          {liked ? 'Unlike' : 'Like'}
-        </button>
-
-        <button onClick={() => setShowComment(s => !s)} className="btn-comment">Comentar</button>
-      </div>
-      {showComment && (
-        <div className="p-3">
-          <div className="mb-2">
-            {loadingComments && <div className="text-sm text-gray-500">Cargando comentarios...</div>}
-            {!loadingComments && comments && comments.length === 0 && <div className="text-sm text-gray-500">No hay comentarios aún.</div>}
-            {!loadingComments && comments && comments.map(c => (
-              <div key={c._id} className="mb-2 border-b pb-2">
-                <div className="text-sm font-semibold">{(c.authorFirstName || c.authorLastName) ? `${c.authorFirstName || ''} ${c.authorLastName || ''}`.trim() : (c.author || 'Usuario')}</div>
-                <div className="text-sm">{c.content}</div>
-                <div className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
-              </div>
-            ))}
+              <video
+                onPlay={() => {
+                  if (!viewed) {
+                    try { viewPost(post._id).catch(() => {}) } catch (_) {}
+                    setViewed(true)
+                  }
+                }}
+                controls
+                style={{ width: '100%', maxHeight: '480px', display: 'block', objectFit: 'contain' }}
+                poster={resolveUrl(thumbnailUrl)}
+              >
+                <source src={mediaUrl} type={multimedia?.mimetype || 'video/mp4'} />
+                Tu navegador no soporta la etiqueta de video.
+              </video>
+            ) : (
+              <img
+                src={mediaUrl}
+                alt="media"
+                style={{ width: '100%', maxHeight: '480px', display: 'block', objectFit: 'contain' }}
+              />
+            )}
           </div>
+        )}
 
-          <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} className="w-full mb-2" rows={3} />
-          <div className="flex space-x-2">
-            <button onClick={async () => {
-              try {
-                if (!commentText) return
-                await addComment(post._id, commentText)
-                setCommentText('')
-                setShowComment(false)
-              } catch (_) {}
-            }} className="btn-primary">Publicar</button>
-            <button onClick={() => { setCommentText(''); setShowComment(false) }} className="btn-secondary">Cancelar</button>
+        {/* ── Stats row ── */}
+        <div className="fb-stats">
+          <span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"
+              style={{ color: liked ? '#22c1c3' : undefined }}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            {localLikes} {localLikes === 1 ? 'like' : 'likes'}
+          </span>
+          <span style={{ cursor: 'pointer' }} onClick={() => setShowComments(true)}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            {commentsCount || 0} comentario{commentsCount !== 1 ? 's' : ''}
+          </span>
+          <span style={{ marginLeft: 'auto' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            {typeof views === 'number' ? views : 0} vista{views !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* ── Action buttons ── */}
+        <div className="fb-actions">
+          <button onClick={handleLike} className={`btn-like${liked ? ' liked' : ''}`}>
+            {liked ? '♥ Te gusta' : '♡ Me gusta'}
+          </button>
+          <button onClick={() => setShowComments(true)} className="btn-comment">
+            💬 Comentar
+          </button>
+        </div>
+
+        {/* ── Media meta ── */}
+        {meta && (meta.width || meta.height || meta.duration || meta.size) && (
+          <div style={{ padding: '0.4rem 1.25rem 0.6rem', fontSize: '0.73rem', color: '#9fb7c3', opacity: 0.7 }}>
+            {meta.width && meta.height && <span style={{ marginRight: '1rem' }}>📐 {meta.width}×{meta.height}</span>}
+            {meta.duration && <span style={{ marginRight: '1rem' }}>⏱ {Math.round(meta.duration)}s</span>}
+            {meta.size && <span>💾 {Math.round(meta.size / 1024)} KB</span>}
           </div>
-        </div>
-      )}
-      {meta && (meta.width || meta.height || meta.duration || meta.size) && (
-        <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
-          {meta.width && meta.height && <span className="mr-3">Resolución: {meta.width}x{meta.height}</span>}
-          {meta.duration && <span className="mr-3">Duración: {Math.round(meta.duration)}s</span>}
-          {meta.size && <span>Tamaño: {Math.round(meta.size/1024)} KB</span>}
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      {/* ── Comments slide-in panel ── */}
+      <CommentsPanel
+        post={post}
+        open={showComments}
+        onClose={() => setShowComments(false)}
+        addComment={addComment}
+        getComments={getComments}
+        joinPost={joinPost}
+      />
+    </>
   )
 }

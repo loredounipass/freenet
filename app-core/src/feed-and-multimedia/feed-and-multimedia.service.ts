@@ -156,7 +156,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       multimediaId: post.multimediaId,
       multimediaUrl: (post as any).multimediaUrl || undefined,
       thumbnailUrl: (post as any).thumbnailUrl || undefined,
-      // multimedia payload intentionally omitted; denormalized fields used instead
+      likes: Array.isArray(post.likes) ? post.likes.map((id: any) => id?.toString()) : [],
       likesCount: typeof (post as any).likesCount === 'number' ? (post as any).likesCount : (Array.isArray(post.likes) ? post.likes.length : 0),
       commentsCount: typeof (post as any).commentsCount === 'number' ? (post as any).commentsCount : 0,
       shares: post.shares || 0,
@@ -389,7 +389,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
         _id description type author
         authorFirstName authorLastName
         multimediaId multimediaUrl thumbnailUrl multimediaStatus
-        likesCount commentsCount
+        likes likesCount commentsCount
         shares views createdAt updatedAt
       `)
       .sort({ createdAt: -1 })
@@ -423,7 +423,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
         _id description type author
         authorFirstName authorLastName
         multimediaId multimediaUrl thumbnailUrl multimediaStatus
-        likesCount commentsCount
+        likes likesCount commentsCount
         shares views createdAt updatedAt
       `)
       .sort({ createdAt: -1 })
@@ -441,6 +441,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       multimediaId: doc.multimediaId,
       multimediaUrl: doc.multimediaUrl || undefined,
       thumbnailUrl: doc.thumbnailUrl || undefined,
+      likes: Array.isArray(doc.likes) ? doc.likes.map((id: any) => id?.toString()) : [],
       likesCount: typeof doc.likesCount === 'number' ? doc.likesCount : (Array.isArray(doc.likes) ? doc.likes.length : 0),
       commentsCount: typeof doc.commentsCount === 'number' ? doc.commentsCount : 0,
       shares: doc.shares || 0,
@@ -661,7 +662,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       multimediaId: (updated as any).multimediaId,
       multimediaUrl: (updated as any).multimediaUrl || undefined,
       thumbnailUrl: (updated as any).thumbnailUrl || undefined,
-      multimedia: undefined,
+      likes: Array.isArray(updated.likes) ? updated.likes.map((id: any) => id?.toString()) : [],
       likesCount: typeof (updated as any).likesCount === 'number' ? (updated as any).likesCount : (Array.isArray(updated.likes) ? updated.likes.length : 0),
       commentsCount: typeof (updated as any).commentsCount === 'number' ? (updated as any).commentsCount : 0,
       shares: updated.shares || 0,
@@ -696,7 +697,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       multimediaId: (updated as any).multimediaId,
       multimediaUrl: (updated as any).multimediaUrl || undefined,
       thumbnailUrl: (updated as any).thumbnailUrl || undefined,
-      multimedia: undefined,
+      likes: Array.isArray(updated.likes) ? updated.likes.map((id: any) => id?.toString()) : [],
       likesCount: typeof (updated as any).likesCount === 'number' ? (updated as any).likesCount : (Array.isArray(updated.likes) ? updated.likes.length : 0),
       commentsCount: typeof (updated as any).commentsCount === 'number' ? (updated as any).commentsCount : 0,
       shares: updated.shares || 0,

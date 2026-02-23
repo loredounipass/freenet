@@ -9,9 +9,19 @@ export default function FeedList() {
   return (
     <div className="fb-list-wrapper">
       <PostForm />
-      {loading && <div className="text-center py-4">Loading...</div>}
-      {posts && posts.length === 0 && <div className="fb-empty">No hay publicaciones aún.</div>}
-      <div className="space-y-4">
+
+      {loading && (
+        <div className="fb-loading">Cargando publicaciones</div>
+      )}
+
+      {!loading && posts && posts.length === 0 && (
+        <div className="fb-empty">
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🌐</div>
+          No hay publicaciones aún. ¡Sé el primero en publicar!
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {posts && posts.map((p) => (
           <FeedItem
             key={p._id}

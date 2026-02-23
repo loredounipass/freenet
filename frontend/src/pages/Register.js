@@ -2,9 +2,10 @@ import React from 'react';
 import useAuth from './../hooks/useAuth';
 
 export default function Register() {
-  const { registerUser, error } = useAuth();
+  const { registerUser } = useAuth();
 
-  const [openSnackbar, setOpenSnackbar] = React.useState(false);
+  const [errorMsg, setErrorMsg]               = React.useState('');
+  const [openSnackbar, setOpenSnackbar]       = React.useState(false);
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
@@ -14,15 +15,19 @@ export default function Register() {
     event.preventDefault();
 
     if (password !== confirmPassword) {
-      setOpenSnackbar(true);
+      setErrorMsg('Las contraseñas no coinciden.');
       return;
     }
 
+    setErrorMsg('');
     const data = Object.fromEntries(new FormData(event.currentTarget));
     try {
-      await registerUser(data);
+      const result = await registerUser(data);
+      if (result && !result.ok) {
+        setErrorMsg(result.error || 'Error al registrarse.');
+      }
     } catch (e) {
-      setOpenSnackbar(true);
+      setErrorMsg(e?.message || 'Error al registrarse.');
     }
   };
 
@@ -80,6 +85,21 @@ export default function Register() {
             {password !== confirmPassword && <div className="error-note">Las contraseñas no coinciden</div>}
           </div>
 
+          {/* Error banner */}
+          {errorMsg && (
+            <div className="error-note" role="alert" style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.65rem 0.9rem', borderRadius: '10px',
+              background: 'rgba(255,80,80,0.08)',
+              border: '1px solid rgba(255,80,80,0.20)',
+              color: '#ff9b9b', fontSize: '0.875rem',
+              marginBottom: '0.25rem',
+              animation: 'fn-shake 0.35s ease',
+            }}>
+              <span>⚠️</span> {errorMsg}
+            </div>
+          )}
+
           <div className="form-group">
             <button type="submit" className="btn-primary">Create Account</button>
           </div>
@@ -88,9 +108,7 @@ export default function Register() {
             <a href="/login" className="signup-button">Already have an account? <span className="signup-cta">Log In</span></a>
           </div>
 
-          {openSnackbar && (
-            <div className="error-note">{error || 'Ha ocurrido un error al registrarse.'}</div>
-          )}
+
         </form>
       </div>
     </div>

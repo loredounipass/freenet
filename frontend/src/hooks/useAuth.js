@@ -37,11 +37,20 @@ export default function useAuth() {
             const { data } = await User.register(body);
             if (data) {
                 navigate('/login');
+                return { ok: true };
             } else {
-                setError(data.error);
+                const errMsg = data?.error || data?.message || 'Error al registrarse.';
+                setError(errMsg);
+                return { ok: false, error: errMsg };
             }
         } catch (err) {
-            setError(err.message);
+            const msg =
+                err?.response?.data?.message ||
+                err?.response?.data?.error   ||
+                err?.message                 ||
+                'Error al registrarse.';
+            setError(msg);
+            return { ok: false, error: msg };
         }
     };
 
@@ -50,18 +59,23 @@ export default function useAuth() {
             const { data } = await User.login(body);
             if (data && 'msg' in data) {
                 if (data.msg === 'Logged in!') {
-                    await setUserContext();
+                    try { await setUserContext(); } catch (_) {}
                 }
-                return data;
+                return { ok: true, data };
             } else {
-                const errMsg = data?.error || 'Credenciales incorrectas.';
+                const errMsg = data?.error || data?.message || 'Credenciales incorrectas.';
                 setError(errMsg);
-                return null;
+                return { ok: false, error: errMsg };
             }
         } catch (err) {
-            const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Credenciales incorrectas.';
+            // Axios wraps HTTP error responses — read the backend message from response.data
+            const msg =
+                err?.response?.data?.message ||
+                err?.response?.data?.error  ||
+                err?.message               ||
+                'Credenciales incorrectas.';
             setError(msg);
-            return null;
+            return { ok: false, error: msg };
         }
     };
 

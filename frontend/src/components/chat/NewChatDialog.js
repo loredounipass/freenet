@@ -1,31 +1,20 @@
-import React, { useState, useCallback } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  List,
-  ListItemButton,
-  ListItemAvatar,
-  Avatar,
-  ListItemText,
-  Typography,
-  Box,
-  IconButton,
-  CircularProgress,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import SearchIcon from '@mui/icons-material/Search';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import User from '../../services/user';
 
-/**
- * Generates a deterministic avatar color based on a name string.
- */
-const getAvatarColor = (name) => {
-  const colors = ['#2186EB', '#F6851B', '#3C3C3B', '#4CAF50', '#E91E63', '#9C27B0', '#FF5722'];
+/** Generates a deterministic gradient based on a name. */
+const getAvatarGradient = (name) => {
+  const gradients = [
+    'linear-gradient(135deg, #22c1c3, #1e90ff)',
+    'linear-gradient(135deg, #f6851b, #e91e63)',
+    'linear-gradient(135deg, #4caf50, #22c1c3)',
+    'linear-gradient(135deg, #9c27b0, #1e90ff)',
+    'linear-gradient(135deg, #ff5722, #f6851b)',
+    'linear-gradient(135deg, #e91e63, #9c27b0)',
+    'linear-gradient(135deg, #1e90ff, #4caf50)',
+  ];
   const charCode = name ? name.charCodeAt(0) : 0;
-  return colors[charCode % colors.length];
+  return gradients[charCode % gradients.length];
 };
 
 /**
@@ -63,7 +52,6 @@ export default function NewChatDialog({ open, onClose, onSelectUser, currentUser
       } else if (data?.data && Array.isArray(data.data)) {
         users = data.data;
       }
-      // Filter out current user
       users = users.filter((u) => u._id !== currentUserId);
       setResults(users);
     } catch (err) {
@@ -76,7 +64,6 @@ export default function NewChatDialog({ open, onClose, onSelectUser, currentUser
   const handleQueryChange = (e) => {
     const val = e.target.value;
     setQuery(val);
-    // Debounce search
     clearTimeout(window._searchTimeout);
     window._searchTimeout = setTimeout(() => handleSearch(val), 400);
   };
@@ -96,109 +83,95 @@ export default function NewChatDialog({ open, onClose, onSelectUser, currentUser
     onClose();
   };
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') handleClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  if (!open) return null;
+
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      fullWidth
-      maxWidth="sm"
-      PaperProps={{
-        sx: { borderRadius: 3, minHeight: 300 },
-      }}
-    >
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          pb: 1,
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          {t('chat.new_chat')}
-        </Typography>
-        <IconButton onClick={handleClose} size="small">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+    <div className="ncd-overlay" onClick={handleClose}>
+      <div className="ncd-panel" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="ncd-header">
+          <h3 className="ncd-title">{t('chat.new_chat')}</h3>
+          <button className="ncd-close" onClick={handleClose} aria-label="Cerrar">✕</button>
+        </div>
 
-      <DialogContent sx={{ pt: 1 }}>
-        <TextField
-          fullWidth
-          placeholder={t('chat.search_users')}
-          value={query}
-          onChange={handleQueryChange}
-          autoFocus
-          variant="outlined"
-          size="small"
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ color: '#9E9E9E', mr: 1 }} />,
-            sx: {
-              borderRadius: 3,
-              bgcolor: '#F5F5F5',
-            },
-          }}
-          sx={{ mb: 2 }}
-        />
+        {/* Body */}
+        <div className="ncd-body">
+          {/* Search input */}
+          <div className="ncd-search-wrap">
+            <span className="ncd-search-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </span>
+            <input
+              className="ncd-search-input"
+              placeholder={t('chat.search_users')}
+              value={query}
+              onChange={handleQueryChange}
+              autoFocus
+            />
+          </div>
 
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={30} sx={{ color: '#2186EB' }} />
-          </Box>
-        )}
+          {/* Loading */}
+          {loading && (
+            <div className="ncd-loading">
+              <div style={{
+                width: 28, height: 28,
+                border: '3px solid rgba(34,193,195,0.2)',
+                borderTopColor: '#22c1c3',
+                borderRadius: '50%',
+                animation: 'fn-spin 0.9s linear infinite',
+              }} />
+            </div>
+          )}
 
-        {!loading && searched && results.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="body2" sx={{ color: '#9E9E9E' }}>
-              {t('chat.no_users_found')}
-            </Typography>
-          </Box>
-        )}
+          {/* No results */}
+          {!loading && searched && results.length === 0 && (
+            <div className="ncd-empty">{t('chat.no_users_found')}</div>
+          )}
 
-        {!loading && results.length > 0 && (
-          <List sx={{ pt: 0 }}>
-            {results.map((user) => {
-              const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-              const initial = user.firstName ? user.firstName.charAt(0).toUpperCase() : '?';
+          {/* Results */}
+          {!loading && results.length > 0 && (
+            <div className="ncd-results">
+              {results.map((user) => {
+                const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+                const initial = user.firstName ? user.firstName.charAt(0).toUpperCase() : '?';
 
-              return (
-                <ListItemButton
-                  key={user._id}
-                  onClick={() => handleSelect(user)}
-                  sx={{ borderRadius: 2, mb: 0.5 }}
-                >
-                  <ListItemAvatar>
-                    <Avatar
-                      sx={{
-                        bgcolor: getAvatarColor(user.firstName || ''),
-                        width: 40,
-                        height: 40,
-                        fontSize: 18,
-                        fontWeight: 'bold',
-                        color: '#fff',
-                      }}
+                return (
+                  <div
+                    key={user._id}
+                    className="ncd-user-row"
+                    onClick={() => handleSelect(user)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSelect(user)}
+                  >
+                    <div
+                      className="ncd-user-avatar"
+                      style={{ background: getAvatarGradient(user.firstName || '') }}
                     >
                       {initial}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body1" sx={{ fontWeight: 500, color: '#333' }}>
-                        {name}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
-                        {user.email}
-                      </Typography>
-                    }
-                  />
-                </ListItemButton>
-              );
-            })}
-          </List>
-        )}
-      </DialogContent>
-    </Dialog>
+                    </div>
+                    <div>
+                      <div className="ncd-user-name">{name}</div>
+                      <div className="ncd-user-email">{user.email}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

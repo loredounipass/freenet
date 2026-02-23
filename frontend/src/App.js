@@ -22,7 +22,8 @@ import ConversationList from './components/chat/ConversationList'
 import ChatView from './components/chat/ChatView'
 import FeedList from './components/feed/FeedList'
 import { LanguageProvider } from './hooks/LanguageContext';
-import './i18n'; 
+import { SocketProvider } from './hooks/SocketContext';
+import './i18n';
 
 // APLICACION CLIENTE
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
 
     return (
             <AuthContext.Provider value={{ auth, setAuth, loading }}>
+                <SocketProvider>
                 <LanguageProvider>
                 <ThemeProvider theme={mdTheme}>
                     <Box sx={{ display: 'flex' }}>
@@ -69,6 +71,7 @@ export default function App() {
                     </Box>
                 </ThemeProvider>
                 </LanguageProvider>
+                </SocketProvider>
             </AuthContext.Provider>
     )
 }

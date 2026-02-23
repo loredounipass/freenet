@@ -54,6 +54,7 @@ const feedService = {
   getFeed,
   getPostById,
   addComment,
+  getComments,   // ← was missing — caused "No se pudieron cargar los comentarios"
   likePost,
   unlikePost,
   viewPost,
