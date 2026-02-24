@@ -41,6 +41,11 @@ const feedUploadApi = `${baseApi}/feed/upload`
 const feedCommentsApi = (postId) => `${feedApi}/${postId}/comments`
 const feedLikesApi = (postId) => `${feedApi}/${postId}/likes`
 const feedViewsApi = (postId) => `${feedApi}/${postId}/views`
+// builder for single post resource
+const feedPostApi = (postId) => `${feedApi}/${postId}`
+// builders for comment-specific resources (by comment id)
+const feedCommentByIdApi = (commentId) => `${feedApi}/comments/${commentId}`
+const feedCommentLikesApi = (commentId) => `${feedApi}/comments/${commentId}/likes`
 
 // endpoints de búsqueda de usuarios
 const searchUsersApi = `${baseApi}/user/search`
@@ -93,6 +98,9 @@ export {
     feedCommentsApi,
     feedLikesApi,
     feedViewsApi,
+    feedPostApi,
+    feedCommentByIdApi,
+    feedCommentLikesApi,
     searchUsersApi,
     loginApi,
     logoutApi,

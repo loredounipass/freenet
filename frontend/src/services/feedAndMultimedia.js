@@ -1,4 +1,4 @@
-import { get, getFeed as apiGetFeed, post, postMultipart, del, feedApi, feedUploadApi, feedCommentsApi, feedLikesApi, feedViewsApi } from '../api/http'
+import { get, getFeed as apiGetFeed, post, postMultipart, del, feedApi, feedUploadApi, feedCommentsApi, feedLikesApi, feedViewsApi, feedPostApi, feedCommentLikesApi } from '../api/http'
 
 export async function createPost(dto) {
   return await post(feedApi, dto)
@@ -20,7 +20,7 @@ export async function getFeed(limit = 50) {
 }
 
 export async function getPostById(id) {
-  return await get(`${feedApi}/${id}`)
+  return await get(feedPostApi(id))
 }
 
 export async function addComment(postId, content, parentId) {
@@ -37,12 +37,12 @@ export async function getComments(postId) {
 
 export async function likeComment(commentId) {
   if (!commentId) throw new Error('commentId required')
-  return await post(`${feedApi}/comments/${commentId}/likes`)
+  return await post(feedCommentLikesApi(commentId))
 }
 
 export async function unlikeComment(commentId) {
   if (!commentId) throw new Error('commentId required')
-  return await del(`${feedApi}/comments/${commentId}/likes`)
+  return await del(feedCommentLikesApi(commentId))
 }
 
 export async function likePost(postId) {
