@@ -27,6 +27,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
     private readonly storage: LocalStorageProvider,
   ) {}
 
+
+  
   // Listen to multimedia processing events to update feed posts when media becomes ready
   onModuleInit() {
     try {
@@ -66,7 +68,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
               }
             }
 
-            const out = await this.buildPostOutput(postDoc._id?.toString());
+                const out = await this.getPostById(postDoc._id?.toString());
             this.eventEmitter.emit('post.updated', out);
           } catch (err) {
             console.warn('multimedia.ready handler error', err);
@@ -93,7 +95,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
               await this.feedModel.updateOne({ _id: postDoc._id }, { $set: { multimediaStatus: 'failed' } }).exec();
             } catch (e) { console.warn('Failed to update post multimediaStatus to failed', e); }
 
-            const out = await this.buildPostOutput(postDoc._id?.toString());
+            const out = await this.getPostById(postDoc._id?.toString());
             this.eventEmitter.emit('post.updated', out);
           } catch (err) {
             console.warn('multimedia.failed handler error', err);
@@ -123,7 +125,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
             const posts = await this.feedModel.find({ author: new Types.ObjectId(userId) }).sort({ createdAt: -1 }).limit(200).select('_id').lean().exec();
             for (const p of posts) {
               try {
-                const out = await this.buildPostOutput(p._id?.toString());
+                const out = await this.getPostById(p._id?.toString());
                 this.eventEmitter.emit('post.updated', out);
               } catch (_) {}
             }
@@ -136,9 +138,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
 
   
-
-  // Centralized builder: returns consistent DTO for a post
-  private async buildPostOutput(postId: string) {
+// get the piost by id, including denormalized author names and multimedia fields; lean query for performance; throw if not found
+  async getPostById(postId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
 
     // load post lean
@@ -168,6 +169,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
 
 
+  // Create a post without file upload: validate multimediaId if provided, denormalize author names and multimedia fields, create post
   async createPost(dto: CreatePostDto, authorId: string) {
     if (!authorId || !Types.ObjectId.isValid(authorId)) throw new BadRequestException('Invalid authorId');
     // ensure actor exists and fetch display names
@@ -203,10 +205,12 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
     const created = await this.feedModel.create(postPayload);
 
-    const out = await this.buildPostOutput(created._id?.toString());
+    const out = await this.getPostById(created._id?.toString());
     this.eventEmitter.emit('post.created', out);
     return out;
   }
+
+
 
   // Create a post from an uploaded file: store staging, create Multimedia doc, create FeedPost, enqueue processing
   async createPostWithFile(file: Express.Multer.File, body: any, authorId: string) {
@@ -375,45 +379,13 @@ export class FeedAndMultimediaService implements OnModuleInit {
       // leave processingJob.enqueued = false so a background reconciler can find it
     }
 
-    const out = await this.buildPostOutput(createdPostId);
+    const out = await this.getPostById(createdPostId);
     this.eventEmitter.emit('post.created', out);
     return out;
   }
 
-  async getPostsByUser(userId: string) {
-    if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
-    const id = new Types.ObjectId(userId);
-    const posts = await this.feedModel
-      .find({ author: id })
-      .select(`
-        _id description type author
-        authorFirstName authorLastName
-        multimediaId multimediaUrl thumbnailUrl multimediaStatus
-        likes likesCount commentsCount
-        shares views createdAt updatedAt
-      `)
-      .sort({ createdAt: -1 })
-      .lean()
-      .exec();
 
-    // Posts now contain denormalized multimediaUrl/thumbnailUrl/status; avoid extra queries
-    return posts.map((doc: any) => ({
-      _id: doc._id,
-      description: doc.description,
-      type: doc.type,
-      author: doc.author?.toString(),
-      authorFirstName: doc.authorFirstName || undefined,
-      authorLastName: doc.authorLastName || undefined,
-      multimediaId: doc.multimediaId,
-      multimediaUrl: doc.multimediaUrl || undefined,
-      thumbnailUrl: doc.thumbnailUrl || undefined,
-      likesCount: typeof doc.likesCount === 'number' ? doc.likesCount : (Array.isArray(doc.likes) ? doc.likes.length : 0),
-      shares: doc.shares || 0,
-      views: doc.views || 0,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-    }));
-  }
+
 
   // Public/global feed: return recent posts visible to any authenticated user
   async getFeed(limit = 50) {
@@ -451,10 +423,10 @@ export class FeedAndMultimediaService implements OnModuleInit {
     }));
   }
 
-  async getPostById(postId: string) {
-    return await this.buildPostOutput(postId);
-  }
+ 
 
+
+// Update post: only allow author to update; allow updating description, type and multimedia (with validation); if multimedia is updated, denormalize new multimedia fields and remove old multimedia doc + storage asset
   async updatePost(postId: string, data: Partial<CreatePostDto>, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     const post = await this.feedModel.findById(postId).exec();
@@ -470,11 +442,14 @@ export class FeedAndMultimediaService implements OnModuleInit {
       await this.feedModel.updateOne({ _id: postId }, { $set: update }).exec();
     }
 
-    const out = await this.buildPostOutput(postId);
+    const out = await this.getPostById(postId);
     this.eventEmitter.emit('post.updated', out);
     return out;
   }
 
+
+
+// Delete post: only allow author to delete; transactionally remove post, comments and multimedia doc; best-effort remove storage asset after transaction
   async deletePost(postId: string, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     const post = await this.feedModel.findById(postId).lean().exec();
@@ -514,7 +489,9 @@ export class FeedAndMultimediaService implements OnModuleInit {
     return { success: true };
   }
 
-  // Comments
+
+
+  // Comments: create, get for post, like/unlike, delete (only author); when creating comment, increment commentsCount on post; when deleting, decrement commentsCount (best-effort)
   async addComment(dto: CreateCommentDto, authorId: string) {
     if (!authorId || !Types.ObjectId.isValid(authorId)) throw new BadRequestException('Invalid author');
     const author = await this.userService.getUserById(authorId);
@@ -594,6 +571,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
 
 
+  // Get comments for a post: return comments sorted by createdAt desc; include author display names; use lean query and batch load authors to avoid N+1
   async getCommentsForPost(postId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     const comments = await this.commentModel
@@ -634,6 +612,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
   }
 
 
+
+  // Like/unlike comment: atomically add/remove actor from likes array and recalc likesCount using aggregation pipeline; return updated comment; throw if comment not found; emit comment.updated event with post id for potential denormalized counter updates
   async likeComment(commentId: string, actorId: string) {
     if (!commentId || !Types.ObjectId.isValid(commentId)) throw new BadRequestException('Invalid comment id');
     if (!actorId || !Types.ObjectId.isValid(actorId)) throw new BadRequestException('Invalid actor id');
@@ -661,6 +641,9 @@ export class FeedAndMultimediaService implements OnModuleInit {
     return out;
   }
 
+
+
+  // Like/unlike comment: atomically add/remove actor from likes array and recalc likesCount using aggregation pipeline; return updated comment; throw if comment not found; emit comment.updated event with post id for potential denormalized counter updates
   async unlikeComment(commentId: string, actorId: string) {
     if (!commentId || !Types.ObjectId.isValid(commentId)) throw new BadRequestException('Invalid comment id');
     if (!actorId || !Types.ObjectId.isValid(actorId)) throw new BadRequestException('Invalid actor id');
@@ -690,7 +673,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
 
 
-  
+  // Delete comment: only allow author to delete; decrement commentsCount on post (best-effort); emit comment.deleted event with post id for potential denormalized counter updates
   async deleteComment(commentId: string, actorId: string) {
     if (!commentId || !Types.ObjectId.isValid(commentId)) throw new BadRequestException('Invalid comment id');
     const comment = await this.commentModel.findById(commentId).exec();
@@ -710,7 +693,9 @@ export class FeedAndMultimediaService implements OnModuleInit {
     return { success: true };
   }
 
-  // Likes
+
+
+  // Like/unlike post: atomically add/remove actor from likes array and recalc likesCount using aggregation pipeline; return updated post; throw if post not found; emit post.updated event
   async likePost(postId: string, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     if (!actorId || !Types.ObjectId.isValid(actorId)) throw new BadRequestException('Invalid actor id');
@@ -748,6 +733,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
     return out;
   }
 
+
+  // Like/unlike post: atomically add/remove actor from likes array and recalc likesCount using aggregation pipeline; return updated post; throw if post not found; emit post.updated event
   async unlikePost(postId: string, actorId: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     if (!actorId || !Types.ObjectId.isValid(actorId)) throw new BadRequestException('Invalid actor id');
@@ -783,6 +770,9 @@ export class FeedAndMultimediaService implements OnModuleInit {
     return out;
   }
 
+
+
+  // Increment view count on post: atomically increment views by 1; return updated post; throw if post not found; emit post.updated event
   async incrementView(postId: string, actorId?: string) {
     if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
     const updated = await this.feedModel.findOneAndUpdate({ _id: postId } as any, { $inc: { views: 1 } } as any, { returnDocument: 'after', lean: true }).exec();
