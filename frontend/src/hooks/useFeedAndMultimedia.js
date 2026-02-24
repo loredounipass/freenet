@@ -231,6 +231,15 @@ export default function useFeedAndMultimedia() {
 		} catch (err) { throw err }
 	}
 
+	const sharePost = async (postId) => {
+		try {
+			const res = await feedService.sharePost(postId)
+			const updated = (res && res.data) ? res.data : res
+			setPosts(prev => mergePosts(prev, [updated]))
+			return updated
+		} catch (err) { throw err }
+	}
+
 	const getComments = async (postId) => {
 		try {
 			const res = await feedService.getComments(postId)
@@ -261,6 +270,7 @@ export default function useFeedAndMultimedia() {
 			} catch (_) {}
 		},
 		viewPost,
+		sharePost,
 		getComments,
 	}
 }

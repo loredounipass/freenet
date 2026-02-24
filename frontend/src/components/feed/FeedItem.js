@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useContext } from 'react'
 import { mediaBase, apiOrigin } from '../../api/http'
 import CommentsPanel from './CommentsPanel'
+import NewChatDialog from '../chat/NewChatDialog'
+import MessagesService from '../../services/messagesAndMultimedia'
 import { AuthContext } from '../../hooks/AuthContext'
 
 /* ── helpers ── */
@@ -13,7 +15,7 @@ function initials(name) {
 }
 
 export default function FeedItem({ post, actions = {} }) {
-  const { likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment } = actions
+  const { likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost } = actions
   const { auth } = useContext(AuthContext)
 
   // Derive initial liked state from post.likes array (contains user IDs)
@@ -27,6 +29,10 @@ export default function FeedItem({ post, actions = {} }) {
   const [liked, setLiked]               = useState(() => isLikedByMe(post))
   const [localLikes, setLocalLikes]     = useState(post ? (post.likesCount || 0) : 0)
   const [showComments, setShowComments] = useState(false)
+  const [localShares, setLocalShares]   = useState(post ? (post.shares || 0) : 0)
+  const [shareBusy, setShareBusy]       = useState(false)
+  const [shareFeedback, setShareFeedback] = useState('')
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const containerRef = useRef(null)
   const [viewed, setViewed]             = useState(false)
 
@@ -34,6 +40,7 @@ export default function FeedItem({ post, actions = {} }) {
   useEffect(() => {
     setLiked(isLikedByMe(post))
     setLocalLikes(post?.likesCount || 0)
+    setLocalShares(post?.shares || 0)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.likes, post?.likesCount, auth?._id])
 
@@ -70,6 +77,9 @@ export default function FeedItem({ post, actions = {} }) {
     : (author?.username || 'Usuario')
 
   const meta = post.multimedia || {}
+  const shareUrl = (typeof window !== 'undefined' && window.location)
+    ? `${window.location.origin}/feed/${post._id}`
+    : `${apiOrigin}/feed/${post._id}`
   const resolveUrl = (u) => {
     if (!u) return null
     try {
@@ -111,6 +121,72 @@ export default function FeedItem({ post, actions = {} }) {
         setLiked(false)
       }
     } catch (_) {}
+  }
+
+  const handleShare = async () => {
+    if (shareBusy) return
+    setShareBusy(true)
+    try {
+      // Prefer server-side share action if provided
+      if (sharePost) {
+        const res = await sharePost(post._id)
+        const u = (res && res.data) ? res.data : res
+        setLocalShares((s) => (u && typeof u.shares === 'number') ? u.shares : s + 1)
+        setShareFeedback('Compartido')
+        setTimeout(() => setShareFeedback(''), 1800)
+        // open contact chooser so user can forward to contacts (preserve previous behaviour)
+        try { setShareDialogOpen(true) } catch (_) {}
+        return u
+      }
+
+      // Fallback: use Web Share API when available
+      const shareUrl = (typeof window !== 'undefined' && window.location)
+        ? `${window.location.origin}/feed/${post._id}`
+        : `${apiOrigin}/feed/${post._id}`
+
+      if (navigator && navigator.share) {
+        await navigator.share({ title: description || 'Publicación', text: description || '', url: shareUrl })
+        setLocalShares((s) => s + 1)
+        setShareFeedback('Compartido')
+        setTimeout(() => setShareFeedback(''), 1800)
+        try { setShareDialogOpen(true) } catch (_) {}
+        return { shared: true }
+      }
+
+      // Last-resort: copy URL to clipboard
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+        setLocalShares((s) => s + 1)
+        setShareFeedback('Enlace copiado')
+        setTimeout(() => setShareFeedback(''), 1800)
+        try { setShareDialogOpen(true) } catch (_) {}
+        return { copied: true }
+      }
+    } catch (_) {
+      try { setShareFeedback('Error al compartir') } catch (_) {}
+      setTimeout(() => setShareFeedback(''), 2200)
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
+  const handleShareToContact = async (user) => {
+    // user: { _id, firstName, lastName, email }
+    try {
+      const shareUrl = (typeof window !== 'undefined' && window.location)
+        ? `${window.location.origin}/feed/${post._id}`
+        : `${apiOrigin}/feed/${post._id}`
+      // send a message with the link
+      try {
+        await MessagesService.createMessage({ content: shareUrl, type: 'text', receiverId: user._id, senderId: auth?._id })
+        setShareFeedback('Enviado')
+        setTimeout(() => setShareFeedback(''), 1600)
+      } catch (err) {
+        setShareFeedback('No se pudo enviar')
+        setTimeout(() => setShareFeedback(''), 2200)
+      }
+    } catch (_) {}
+    setShareDialogOpen(false)
   }
 
   return (
@@ -179,6 +255,14 @@ export default function FeedItem({ post, actions = {} }) {
             </svg>
             {commentsCount || 0} comentario{commentsCount !== 1 ? 's' : ''}
           </span>
+          <span style={{ cursor: 'pointer', marginLeft: '0.6rem' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/>
+              <path d="M12 3v13"/>
+              <path d="M8 7l4-4 4 4"/>
+            </svg>
+            {localShares || 0} compartido{(localShares || 0) !== 1 ? 's' : ''}
+          </span>
           <span style={{ marginLeft: 'auto' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -195,6 +279,9 @@ export default function FeedItem({ post, actions = {} }) {
           </button>
           <button onClick={() => setShowComments(true)} className="btn-comment">
             💬 Comentar
+          </button>
+          <button onClick={handleShare} className="btn-share" disabled={shareBusy}>
+            {shareBusy ? '...' : (shareFeedback || '🔗 Compartir')}
           </button>
         </div>
 
@@ -218,6 +305,14 @@ export default function FeedItem({ post, actions = {} }) {
         joinPost={joinPost}
         likeComment={likeComment}
         unlikeComment={unlikeComment}
+      />
+
+      <NewChatDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        onSelectUser={(u) => handleShareToContact(u)}
+        currentUserId={auth?._id}
+        shareUrl={shareUrl}
       />
     </>
   )

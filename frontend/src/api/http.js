@@ -41,6 +41,7 @@ const feedUploadApi = `${baseApi}/feed/upload`
 const feedCommentsApi = (postId) => `${feedApi}/${postId}/comments`
 const feedLikesApi = (postId) => `${feedApi}/${postId}/likes`
 const feedViewsApi = (postId) => `${feedApi}/${postId}/views`
+const feedSharesApi = (postId) => `${feedApi}/${postId}/shares`
 // builder for single post resource
 const feedPostApi = (postId) => `${feedApi}/${postId}`
 // builders for comment-specific resources (by comment id)
@@ -101,6 +102,7 @@ export {
     feedPostApi,
     feedCommentByIdApi,
     feedCommentLikesApi,
+    feedSharesApi,
     searchUsersApi,
     loginApi,
     logoutApi,

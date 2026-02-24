@@ -4,7 +4,7 @@ import FeedItem from './FeedItem'
 import PostForm from './PostForm'
 
 export default function FeedList() {
-  const { posts, loading, likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment } = useFeedAndMultimedia()
+  const { posts, loading, likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost } = useFeedAndMultimedia()
 
   return (
     <div className="fb-list-wrapper">
@@ -26,7 +26,7 @@ export default function FeedList() {
           <FeedItem
             key={p._id}
             post={p}
-            actions={{ likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment }}
+            actions={{ likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost }}
           />
         ))}
       </div>

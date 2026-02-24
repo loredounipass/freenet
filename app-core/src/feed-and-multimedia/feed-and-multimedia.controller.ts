@@ -136,4 +136,11 @@ export class FeedAndMultimediaController {
   async addView(@Param('id') id: string, @CurrentUser() user: any) {
     return this.service.incrementView(id, user._id.toString());
   }
+
+  // Increment share count on a post. Called when a user shares a post.
+  @UseGuards(AuthenticatedGuard)
+  @Post(':id/shares')
+  async addShare(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.incrementShare(id, user._id.toString());
+  }
 }

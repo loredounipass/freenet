@@ -799,4 +799,33 @@ export class FeedAndMultimediaService implements OnModuleInit {
     this.eventEmitter.emit('post.updated', out);
     return out;
   }
+
+
+  // Increment share count on a post: atomically increment shares by 1; return updated post; emit post.updated
+  async incrementShare(postId: string, actorId?: string) {
+    if (!postId || !Types.ObjectId.isValid(postId)) throw new BadRequestException('Invalid post id');
+    const updated = await this.feedModel.findOneAndUpdate({ _id: postId } as any, { $inc: { shares: 1 } } as any, { returnDocument: 'after', lean: true }).exec();
+    if (!updated) throw new NotFoundException('Post not found');
+
+    const out = {
+      _id: updated._id?.toString(),
+      description: updated.description,
+      type: updated.type,
+      author: updated.author?.toString(),
+      authorFirstName: (updated as any).authorFirstName || undefined,
+      authorLastName: (updated as any).authorLastName || undefined,
+      multimediaId: (updated as any).multimediaId,
+      multimediaUrl: (updated as any).multimediaUrl || undefined,
+      thumbnailUrl: (updated as any).thumbnailUrl || undefined,
+      likesCount: typeof (updated as any).likesCount === 'number' ? (updated as any).likesCount : (Array.isArray(updated.likes) ? updated.likes.length : 0),
+      commentsCount: typeof (updated as any).commentsCount === 'number' ? (updated as any).commentsCount : 0,
+      shares: updated.shares || 0,
+      views: updated.views || 0,
+      createdAt: (updated as any).createdAt,
+      updatedAt: (updated as any).updatedAt,
+    };
+
+    try { this.eventEmitter.emit('post.updated', out); } catch (_) {}
+    return out;
+  }
 }

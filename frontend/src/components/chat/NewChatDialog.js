@@ -26,12 +26,13 @@ const getAvatarGradient = (name) => {
  *  - onSelectUser: (user) => void
  *  - currentUserId: string
  */
-export default function NewChatDialog({ open, onClose, onSelectUser, currentUserId }) {
+export default function NewChatDialog({ open, onClose, onSelectUser, currentUserId, shareUrl }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState('');
 
   const handleSearch = useCallback(async (searchQuery) => {
     const trimmed = searchQuery.trim();
@@ -83,6 +84,22 @@ export default function NewChatDialog({ open, onClose, onSelectUser, currentUser
     onClose();
   };
 
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopyFeedback('Copiado');
+        setTimeout(() => setCopyFeedback(''), 1400);
+      } else {
+        // fallback: select and copy via prompt
+        window.prompt('Copia el enlace:', shareUrl);
+      }
+    } catch (err) {
+      try { window.prompt('Copia el enlace:', shareUrl); } catch (_) {}
+    }
+  };
+
   // Close on Escape key
   useEffect(() => {
     if (!open) return;
@@ -105,6 +122,16 @@ export default function NewChatDialog({ open, onClose, onSelectUser, currentUser
 
         {/* Body */}
         <div className="ncd-body">
+          {/* Share link (optional) */}
+          {shareUrl && (
+            <div className="ncd-share-link" style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+              <input readOnly value={shareUrl} style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.12)', color: 'var(--fn-muted)' }} />
+              <button className="ncd-copy-btn" onClick={handleCopyLink} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--fn-border)', background: 'rgba(255,255,255,0.03)', color: 'var(--fn-muted)', cursor: 'pointer' }}>
+                {copyFeedback || 'Copiar'}
+              </button>
+            </div>
+          )}
+
           {/* Search input */}
           <div className="ncd-search-wrap">
             <span className="ncd-search-icon">

@@ -1,4 +1,4 @@
-import { get, getFeed as apiGetFeed, post, postMultipart, del, feedApi, feedUploadApi, feedCommentsApi, feedLikesApi, feedViewsApi, feedPostApi, feedCommentLikesApi } from '../api/http'
+import { get, getFeed as apiGetFeed, post, postMultipart, del, feedApi, feedUploadApi, feedCommentsApi, feedLikesApi, feedViewsApi, feedPostApi, feedCommentLikesApi, feedSharesApi } from '../api/http'
 
 export async function createPost(dto) {
   return await post(feedApi, dto)
@@ -60,6 +60,11 @@ export async function viewPost(postId) {
   return await post(feedViewsApi(postId))
 }
 
+export async function sharePost(postId) {
+  if (!postId) throw new Error('postId required')
+  return await post(feedSharesApi(postId))
+}
+
 const feedService = {
   createPost,
   createPostWithFile,
@@ -72,6 +77,7 @@ const feedService = {
   likePost,
   unlikePost,
   viewPost,
+  sharePost,
 }
 
 export default feedService
