@@ -3,6 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { AuthContext } from '../hooks/AuthContext';
 import { useTranslation } from 'react-i18next';
+import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
+import LiveTvIcon from '@mui/icons-material/LiveTv';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import ExploreIcon from '@mui/icons-material/Explore';
 
 function Navbar() {
   const { t } = useTranslation();
@@ -47,26 +52,34 @@ function Navbar() {
   if (!auth) return null;
 
   const navItems = [
-    { to: '/feed', label: t('nav.feed') },
-    { to: '/live', label: t('nav.live') },
-    { to: '/chat', label: t('nav.chat') },
-    { to: '/videos', label: t('nav.videos') },
-    { to: '/discover', label: t('nav.discover') },
+    { to: '/feed', label: t('nav.feed'), icon: <DynamicFeedIcon />, tone: 'teal' },
+    { to: '/live', label: t('nav.live'), icon: <LiveTvIcon />, tone: 'blue' },
+    { to: '/chat', label: t('nav.chat'), icon: <ChatBubbleOutlineIcon />, tone: 'blue' },
+    { to: '/videos', label: t('nav.videos'), icon: <VideoLibraryIcon />, tone: 'teal' },
+    { to: '/discover', label: t('nav.discover'), icon: <ExploreIcon />, tone: 'teal' },
   ];
 
   return (
     <header className="site-header">
       <div className="site-inner">
         <div className="site-left">
-          <Link to="/" className="logo">
-            <div className="freenet-logo-placeholder" aria-hidden>F</div>
-            <span className="auth-title logo-text">FREENET</span>
+          <Link to="/" className="logo" aria-label="Freenet">
+            <div className="freenet-logo-placeholder navbar-logo" aria-hidden>F</div>
           </Link>
+          <div className="nav-search-wrap">
+            <span className="nav-search-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </span>
+            <input className="nav-search-input" placeholder="Buscar" />
+          </div>
         </div>
 
         <nav className="nav-links">
           {navItems.map((n) => (
             <Link key={n.to} to={n.to} className="nav-link">
+              <span className={`nav-icon ${n.tone}`}>{n.icon}</span>
               {n.label}
             </Link>
           ))}
@@ -101,6 +114,7 @@ function Navbar() {
           <div className="mobile-inner">
             {navItems.map((n) => (
               <Link key={n.to} to={n.to} onClick={() => setMobileOpen(false)} className="mobile-item">
+                <span className={`nav-icon ${n.tone}`}>{n.icon}</span>
                 {n.label}
               </Link>
             ))}

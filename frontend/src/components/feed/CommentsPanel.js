@@ -19,6 +19,14 @@ function relativeTime(dateStr) {
   return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+function sortByCreatedAtAsc(list) {
+  return [...list].sort((a, b) => {
+    const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0
+    const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0
+    return da - db
+  })
+}
+
 /* ── component ── */
 export default function CommentsPanel({ post, open, onClose, addComment, getComments, joinPost, likeComment, unlikeComment }) {
   const { auth } = useContext(AuthContext)
@@ -28,6 +36,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
   const [submitting, setSubmitting]       = useState(false)
   const [error, setError]                 = useState(null)
   const [replyTo, setReplyTo]             = useState(null)
+  const [expandedThreads, setExpandedThreads] = useState({})
   // optimistic like state updater
   const toggleLike = async (comment) => {
     if (!auth || !auth._id) return
@@ -49,6 +58,8 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
   const panelRef    = useRef(null)
+  const listRef     = useRef(null)
+  const prevCountRef = useRef(0)
 
   /* lock body scroll while open */
   useEffect(() => {
@@ -84,10 +95,18 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
     return () => { mounted = false }
   }, [open, post, getComments, joinPost])
 
-  /* scroll to bottom when comments arrive */
+  /* scroll to bottom when comments arrive (only if user is near bottom) */
   useEffect(() => {
     if (open && comments.length > 0) {
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+      const list = listRef.current
+      const nearBottom = list
+        ? (list.scrollHeight - list.scrollTop - list.clientHeight) < 80
+        : true
+      const isFirstLoad = prevCountRef.current === 0
+      if (comments.length > prevCountRef.current && (nearBottom || isFirstLoad)) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+      }
+      prevCountRef.current = comments.length
     }
   }, [comments, open])
 
@@ -106,6 +125,9 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
     try {
       const newComment = await addComment(post._id, text.trim(), replyTo?.id)
       setText('')
+      if (replyTo?.id) {
+        setExpandedThreads(prev => ({ ...prev, [String(replyTo.id)]: true }))
+      }
       setReplyTo(null)
       /* optimistic: append & then reload */
       const candidate = {
@@ -137,6 +159,139 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
         : post.author?.username || 'Usuario')
     : ''
 
+  const normalizedComments = Array.isArray(comments) ? comments : []
+  const commentById = new Map()
+  normalizedComments.forEach((c) => {
+    if (c?._id) commentById.set(String(c._id), c)
+  })
+  const childrenMap = new Map()
+  normalizedComments.forEach((c) => {
+    const parentId = c?.parent ? String(c.parent) : null
+    if (!parentId || !commentById.has(parentId)) return
+    const arr = childrenMap.get(parentId) || []
+    arr.push(c)
+    childrenMap.set(parentId, arr)
+  })
+  const rootComments = normalizedComments.filter((c) => {
+    const parentId = c?.parent ? String(c.parent) : null
+    return !parentId || !commentById.has(parentId)
+  })
+  const renderThread = (c, depth) => {
+    const name = (c.authorFirstName || c.authorLastName)
+      ? `${c.authorFirstName || ''} ${c.authorLastName || ''}`.trim()
+      : (c.author || 'Usuario')
+    const children = sortByCreatedAtAsc(childrenMap.get(String(c._id)) || [])
+    const indent = depth > 0 ? 18 : 0
+    const isExpanded = expandedThreads[String(c._id)]
+    const visibleChildren = isExpanded ? children : children.slice(-3)
+    const isNew = c?.createdAt ? (Date.now() - new Date(c.createdAt).getTime() < 5000) : false
+    return (
+      <div key={c._id} style={{ position: 'relative', paddingLeft: depth ? `${indent}px` : 0 }}>
+        <div
+          style={{
+            display: 'flex', gap: '0.6rem', alignItems: 'flex-start',
+            padding: '0.45rem 0',
+            borderBottom: 'none',
+            animation: isNew ? 'fb-comment-in 200ms ease' : 'none',
+          }}
+        >
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+            background: 'linear-gradient(135deg,#22c1c3,#1e90ff)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 700, fontSize: '0.8rem', color: '#04111a',
+          }}>
+            {initials(name)}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '12px 12px 12px 4px',
+              padding: '0.45rem 0.7rem',
+              maxWidth: '78%',
+              width: 'fit-content',
+              minWidth: '13.5rem',
+              display: 'inline-block',
+            }}>
+              <div style={{
+                fontWeight: 700, fontSize: '0.8rem',
+                color: '#e6eef5', marginBottom: '1px',
+              }}>
+                {name}
+              </div>
+              <div style={{
+                fontSize: '0.86rem', color: '#ccdde8',
+                lineHeight: 1.35, wordBreak: 'break-word'
+              }}>
+                {c.parent && c.parentAuthorName
+                  ? <div style={{ color: '#9fb7c3', marginBottom: '2px', marginLeft: '4px' }}>@{c.parentAuthorName}</div>
+                  : null}
+                <div style={{ marginLeft: c.parent ? '8px' : 0 }}>{c.content}</div>
+              </div>
+            </div>
+            <div style={{
+              fontSize: '0.7rem', color: '#6f8a96',
+              marginTop: '3px', paddingLeft: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+              maxWidth: '78%', justifyContent: 'space-between',
+              width: 'fit-content',
+              minWidth: '13.5rem'
+            }}>
+              <div style={{ flex: 1 }}>{relativeTime(c.createdAt)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setReplyTo({ id: c._id, name }); inputRef.current?.focus() }}
+                  style={{
+                    background: 'transparent', border: 'none', color: '#22c1c3', cursor: 'pointer', fontSize: '0.74rem'
+                  }}
+                >
+                  Responder
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleLike(c)}
+                  style={{ background: 'transparent', border: 'none', color: (Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : '#9fb7c3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={(Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : 'none'} stroke={(Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : '#9fb7c3'} strokeWidth="1.5">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  </svg>
+                  <span style={{ fontSize: '0.85rem' }}>{c.likesCount || 0}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {children.length > 0 && (
+          <div style={{ marginTop: '0.15rem' }}>
+            {visibleChildren.map((child) => renderThread(child, depth + 1))}
+            {children.length > 3 && !isExpanded && (
+              <button
+                type="button"
+                onClick={() => setExpandedThreads(prev => ({ ...prev, [String(c._id)]: true }))}
+                style={{
+                  marginLeft: indent ? `${indent}px` : 0,
+                  marginTop: '0.35rem',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#22c1c3',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                }}
+              >
+                Ver más respuestas ({children.length - 3})
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
       {/* ── Backdrop ── */}
@@ -158,7 +313,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
         style={{
           position: 'fixed',
           top: 0, right: 0, bottom: 0,
-          width: '100%', maxWidth: '440px',
+          width: '100%', maxWidth: '560px',
           zIndex: 500,
           display: 'flex',
           flexDirection: 'column',
@@ -228,7 +383,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
         )}
 
         {/* ── Comments list ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
+        <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
           {loading && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.6rem',
@@ -271,87 +426,11 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
             </div>
           )}
 
-          {!loading && comments.map((c, i) => {
-            const name = (c.authorFirstName || c.authorLastName)
-              ? `${c.authorFirstName || ''} ${c.authorLastName || ''}`.trim()
-              : (c.author || 'Usuario')
-            return (
-              <div
-                key={c._id || i}
-                style={{
-                  display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
-                  padding: '0.7rem 0',
-                  borderBottom: i < comments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                  animation: 'fb-comment-in 200ms ease',
-                }}
-              >
-                {/* Avatar */}
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                  background: 'linear-gradient(135deg,#22c1c3,#1e90ff)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: '0.85rem', color: '#04111a',
-                }}>
-                  {initials(name)}
-                </div>
-
-                {/* Bubble */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '12px 12px 12px 4px',
-                    padding: '0.6rem 0.85rem',
-                  }}>
-                    <div style={{
-                      fontWeight: 700, fontSize: '0.83rem',
-                      color: '#e6eef5', marginBottom: '2px',
-                    }}>
-                      {name}
-                    </div>
-                    <div style={{
-                      fontSize: '0.9rem', color: '#ccdde8',
-                      lineHeight: 1.45, wordBreak: 'break-word'
-                    }}>
-                      {c.parent && c.parentAuthorName
-                        ? <div style={{ color: '#9fb7c3', marginBottom: '4px', marginLeft: '4px' }}>@{c.parentAuthorName}</div>
-                        : null}
-                      <div style={{ marginLeft: c.parent ? '8px' : 0 }}>{c.content}</div>
-                    </div>
-                  </div>
-                  <div style={{
-                    fontSize: '0.72rem', color: '#6f8a96',
-                    marginTop: '4px', paddingLeft: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem'
-                  }}>
-                    <div style={{ flex: 1 }}>{relativeTime(c.createdAt)}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => { setReplyTo({ id: c._id, name }); inputRef.current?.focus() }}
-                        style={{
-                          background: 'transparent', border: 'none', color: '#22c1c3', cursor: 'pointer', fontSize: '0.78rem'
-                        }}
-                      >
-                        Responder
-                      </button>
-
-                      {/* small like button next to responder */}
-                      <button
-                        type="button"
-                        onClick={() => toggleLike(c)}
-                        style={{ background: 'transparent', border: 'none', color: (Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : '#9fb7c3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill={(Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : 'none'} stroke={(Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : '#9fb7c3'} strokeWidth="1.5">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                        <span style={{ fontSize: '0.85rem' }}>{c.likesCount || 0}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          {!loading && sortByCreatedAtAsc(rootComments).map((c, i) => (
+            <div key={c._id || i}>
+              {renderThread(c, 0)}
+            </div>
+          ))}
 
           <div ref={bottomRef} />
         </div>
