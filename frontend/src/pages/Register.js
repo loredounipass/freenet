@@ -5,7 +5,6 @@ export default function Register() {
   const { registerUser } = useAuth();
 
   const [errorMsg, setErrorMsg]               = React.useState('');
-  const [openSnackbar, setOpenSnackbar]       = React.useState(false);
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);

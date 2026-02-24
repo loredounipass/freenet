@@ -20,13 +20,32 @@ function relativeTime(dateStr) {
 }
 
 /* ── component ── */
-export default function CommentsPanel({ post, open, onClose, addComment, getComments, joinPost }) {
+export default function CommentsPanel({ post, open, onClose, addComment, getComments, joinPost, likeComment, unlikeComment }) {
   const { auth } = useContext(AuthContext)
   const [comments, setComments]           = useState([])
   const [loading, setLoading]             = useState(false)
   const [text, setText]                   = useState('')
   const [submitting, setSubmitting]       = useState(false)
   const [error, setError]                 = useState(null)
+  const [replyTo, setReplyTo]             = useState(null)
+  // optimistic like state updater
+  const toggleLike = async (comment) => {
+    if (!auth || !auth._id) return
+    const meId = String(auth._id)
+    const liked = Array.isArray(comment.likes) && comment.likes.includes(meId)
+    // optimistic update
+    setComments(prev => prev.map(c => c._id === comment._id ? ({ ...c, likesCount: (c.likesCount || 0) + (liked ? -1 : 1), likes: liked ? (Array.isArray(c.likes) ? c.likes.filter(id => id !== meId) : []) : ([...(Array.isArray(c.likes) ? c.likes : []), meId]) }) : c))
+    try {
+      if (liked) {
+        if (typeof unlikeComment === 'function') await unlikeComment(comment._id, post._id)
+      } else {
+        if (typeof likeComment === 'function') await likeComment(comment._id, post._id)
+      }
+    } catch (err) {
+      // revert on error
+      try { const fresh = await getComments(post._id); setComments(Array.isArray(fresh) ? fresh : []) } catch (_) {}
+    }
+  }
   const bottomRef   = useRef(null)
   const inputRef    = useRef(null)
   const panelRef    = useRef(null)
@@ -85,8 +104,9 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
     setSubmitting(true)
     setError(null)
     try {
-      const newComment = await addComment(post._id, text.trim())
+      const newComment = await addComment(post._id, text.trim(), replyTo?.id)
       setText('')
+      setReplyTo(null)
       /* optimistic: append & then reload */
       const candidate = {
         _id: newComment?._id || Date.now().toString(),
@@ -94,6 +114,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
         authorFirstName: auth?.firstName || '',
         authorLastName:  auth?.lastName  || '',
         author: auth?.username || 'Tú',
+        parent: newComment?.parent || replyTo?.id || undefined,
         createdAt: new Date().toISOString(),
       }
       setComments(prev => [...prev, candidate])
@@ -290,16 +311,42 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
                     </div>
                     <div style={{
                       fontSize: '0.9rem', color: '#ccdde8',
-                      lineHeight: 1.45, wordBreak: 'break-word',
+                      lineHeight: 1.45, wordBreak: 'break-word'
                     }}>
-                      {c.content}
+                      {c.parent && c.parentAuthorName
+                        ? <div style={{ color: '#9fb7c3', marginBottom: '4px', marginLeft: '4px' }}>@{c.parentAuthorName}</div>
+                        : null}
+                      <div style={{ marginLeft: c.parent ? '8px' : 0 }}>{c.content}</div>
                     </div>
                   </div>
                   <div style={{
                     fontSize: '0.72rem', color: '#6f8a96',
-                    marginTop: '4px', paddingLeft: '0.25rem',
+                    marginTop: '4px', paddingLeft: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem'
                   }}>
-                    {relativeTime(c.createdAt)}
+                    <div style={{ flex: 1 }}>{relativeTime(c.createdAt)}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => { setReplyTo({ id: c._id, name }); inputRef.current?.focus() }}
+                        style={{
+                          background: 'transparent', border: 'none', color: '#22c1c3', cursor: 'pointer', fontSize: '0.78rem'
+                        }}
+                      >
+                        Responder
+                      </button>
+
+                      {/* small like button next to responder */}
+                      <button
+                        type="button"
+                        onClick={() => toggleLike(c)}
+                        style={{ background: 'transparent', border: 'none', color: (Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : '#9fb7c3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill={(Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : 'none'} stroke={(Array.isArray(c.likes) && auth && auth._id && c.likes.includes(String(auth._id))) ? '#22c1c3' : '#9fb7c3'} strokeWidth="1.5">
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                        <span style={{ fontSize: '0.85rem' }}>{c.likesCount || 0}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -345,6 +392,16 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
 
             {/* Textarea */}
             <div style={{ flex: 1, position: 'relative' }}>
+              {replyTo && (
+                <div style={{
+                  position: 'absolute', left: 8, top: -28, right: 8,
+                  background: 'rgba(34,193,195,0.08)', border: '1px solid rgba(34,193,195,0.12)',
+                  color: '#9ef0ef', fontSize: '0.82rem', padding: '4px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem'
+                }}>
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Respondiendo a <strong style={{ color: '#e6eef5' }}>{replyTo.name}</strong></div>
+                  <button type="button" onClick={() => { setReplyTo(null); inputRef.current?.focus() }} style={{ background: 'transparent', border: 'none', color: '#9fb7c3', cursor: 'pointer' }}>✕</button>
+                </div>
+              )}
               <textarea
                 ref={inputRef}
                 value={text}
@@ -352,7 +409,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e) }
                 }}
-                placeholder="Escribe un comentario… (Enter para enviar)"
+                placeholder={replyTo ? `Responde a ${replyTo.name}… (Enter para enviar)` : "Escribe un comentario… (Enter para enviar)"}
                 rows={1}
                 style={{
                   width: '100%',
@@ -392,7 +449,8 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
                 style={{
                   position: 'absolute',
                   right: '8px',
-                  bottom: '6px',
+                  top: '44%',
+                  transform: 'translateY(-50%)',
                   width: '30px', height: '30px',
                   borderRadius: '50%',
                   border: 'none',
@@ -405,8 +463,8 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
                   transition: 'background 200ms ease, transform 140ms ease',
                   fontSize: '0.95rem',
                 }}
-                onMouseEnter={e => { if (text.trim()) e.currentTarget.style.transform = 'scale(1.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                onMouseEnter={e => { if (text.trim()) e.currentTarget.style.transform = 'translateY(-50%) scale(1.12)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(-50%) scale(1)' }}
               >
                 {submitting
                   ? <span style={{

@@ -14,6 +14,15 @@ export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'FeedPost', required: true })
   post: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Comment', required: false })
+  parent?: Types.ObjectId;
+
+  @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
+  likes?: Types.ObjectId[];
+
+  @Prop({ type: Number, default: 0 })
+  likesCount?: number;
+
   _id?: string;
 }
 

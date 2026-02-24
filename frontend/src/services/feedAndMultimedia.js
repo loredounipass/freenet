@@ -23,14 +23,26 @@ export async function getPostById(id) {
   return await get(`${feedApi}/${id}`)
 }
 
-export async function addComment(postId, content) {
+export async function addComment(postId, content, parentId) {
   if (!postId) throw new Error('postId required')
-  return await post(feedCommentsApi(postId), { content })
+  const body = { content }
+  if (parentId) body.parentId = parentId
+  return await post(feedCommentsApi(postId), body)
 }
 
 export async function getComments(postId) {
   if (!postId) throw new Error('postId required')
   return await get(feedCommentsApi(postId))
+}
+
+export async function likeComment(commentId) {
+  if (!commentId) throw new Error('commentId required')
+  return await post(`${feedApi}/comments/${commentId}/likes`)
+}
+
+export async function unlikeComment(commentId) {
+  if (!commentId) throw new Error('commentId required')
+  return await del(`${feedApi}/comments/${commentId}/likes`)
 }
 
 export async function likePost(postId) {
@@ -55,6 +67,8 @@ const feedService = {
   getPostById,
   addComment,
   getComments,   // ← was missing — caused "No se pudieron cargar los comentarios"
+  likeComment,
+  unlikeComment,
   likePost,
   unlikePost,
   viewPost,

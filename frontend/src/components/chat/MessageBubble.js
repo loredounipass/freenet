@@ -68,7 +68,6 @@ function WaveformBars({ pct, playing, isOwn }) {
 /* ─── Telegram-style Audio Player ───────────────────────────────── */
 function InlineAudioPlayer({ src, isOwn }) {
   const audioRef = useRef(null);
-  const progressRef = useRef(null);
   const [playing, setPlaying]   = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);

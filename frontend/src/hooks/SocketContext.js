@@ -7,7 +7,6 @@
  */
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { AuthContext } from './AuthContext';
 
 export const SocketContext = createContext(null);
 
@@ -28,7 +27,6 @@ function resolveSocketUrl() {
 }
 
 export function SocketProvider({ children }) {
-  const { auth } = useContext(AuthContext);
   const socketRef      = useRef(null);
   const [connected, setConnected] = useState(false);
   const [messages, setMessages]   = useState([]);

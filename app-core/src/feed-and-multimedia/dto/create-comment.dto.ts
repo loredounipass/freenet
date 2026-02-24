@@ -12,4 +12,8 @@ export class CreateCommentDto {
   @IsString()
   @IsNotEmpty()
   authorId: string;
+
+  // Optional parent comment id for replies
+  @IsString()
+  parentId?: string;
 }

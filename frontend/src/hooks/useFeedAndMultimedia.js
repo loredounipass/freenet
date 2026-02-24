@@ -32,6 +32,8 @@ export default function useFeedAndMultimedia() {
 				if (!inc.authorLastName && p.authorLastName) merged.authorLastName = p.authorLastName
 				if ((inc.likesCount === undefined || inc.likesCount === null) && (p.likesCount !== undefined)) merged.likesCount = p.likesCount
 				if ((inc.commentsCount === undefined || inc.commentsCount === null) && (p.commentsCount !== undefined)) merged.commentsCount = p.commentsCount
+				// preserve likes array from existing post when incoming payload omits it
+				if (!inc.likes && Array.isArray(p.likes)) merged.likes = p.likes
 				map.set(p._id, merged)
 			}
 		})
@@ -173,12 +175,12 @@ export default function useFeedAndMultimedia() {
 		}
 	}
 
-	const addComment = async (postId, content) => {
+	const addComment = async (postId, content, parentId) => {
 		try {
-			const res = await feedService.addComment(postId, content)
+			const res = await feedService.addComment(postId, content, parentId)
 			const created = (res && res.data) ? res.data : res
 			// optimistic: refresh the post to update counts
-			try { const p = await feedService.getPostById(postId); const postObj = p && p.data ? p.data : p; setPosts(prev => mergePosts(prev, [postObj])); } catch(_){}
+			try { const p = await feedService.getPostById(postId); const postObj = p && p.data ? p.data : p; setPosts(prev => mergePosts(prev, [postObj])); } catch(_){ }
 			return created
 		} catch (err) { throw err }
 	}
@@ -188,6 +190,25 @@ export default function useFeedAndMultimedia() {
 			const res = await feedService.likePost(postId)
 			const updated = (res && res.data) ? res.data : res
 			setPosts(prev => mergePosts(prev, [updated]))
+			return updated
+		} catch (err) { throw err }
+	}
+
+	const likeComment = async (commentId, postId) => {
+		try {
+			const res = await feedService.likeComment(commentId)
+			const updated = (res && res.data) ? res.data : res
+			// refresh the related post to update counts / UI
+			try { const p = await feedService.getPostById(postId); const postObj = p && p.data ? p.data : p; setPosts(prev => mergePosts(prev, [postObj])); } catch(_){}
+			return updated
+		} catch (err) { throw err }
+	}
+
+	const unlikeComment = async (commentId, postId) => {
+		try {
+			const res = await feedService.unlikeComment(commentId)
+			const updated = (res && res.data) ? res.data : res
+			try { const p = await feedService.getPostById(postId); const postObj = p && p.data ? p.data : p; setPosts(prev => mergePosts(prev, [postObj])); } catch(_){}
 			return updated
 		} catch (err) { throw err }
 	}
@@ -227,6 +248,8 @@ export default function useFeedAndMultimedia() {
 		addComment,
 		likePost,
 		unlikePost,
+		likeComment,
+		unlikeComment,
 		joinPost: (postId) => {
 			try {
 				if (!socketRef.current) return

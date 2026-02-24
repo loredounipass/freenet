@@ -66,6 +66,7 @@ export class FeedAndMultimediaController {
       content: body.content,
       postId: id,
       authorId: user._id.toString(),
+      parentId: body.parentId,
     } as CreateCommentDto;
     return this.service.addComment(dto, user._id.toString());
   }
@@ -80,6 +81,18 @@ export class FeedAndMultimediaController {
   @Delete('comments/:commentId')
   async deleteComment(@Param('commentId') commentId: string, @CurrentUser() user: any) {
     return this.service.deleteComment(commentId, user._id.toString());
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Post('comments/:commentId/likes')
+  async likeComment(@Param('commentId') commentId: string, @CurrentUser() user: any) {
+    return this.service.likeComment(commentId, user._id.toString());
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Delete('comments/:commentId/likes')
+  async unlikeComment(@Param('commentId') commentId: string, @CurrentUser() user: any) {
+    return this.service.unlikeComment(commentId, user._id.toString());
   }
 
   @UseGuards(AuthenticatedGuard)

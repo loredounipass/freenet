@@ -13,7 +13,7 @@ function initials(name) {
 }
 
 export default function FeedItem({ post, actions = {} }) {
-  const { likePost, unlikePost, addComment, joinPost, viewPost, getComments } = actions
+  const { likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment } = actions
   const { auth } = useContext(AuthContext)
 
   // Derive initial liked state from post.likes array (contains user IDs)
@@ -216,6 +216,8 @@ export default function FeedItem({ post, actions = {} }) {
         addComment={addComment}
         getComments={getComments}
         joinPost={joinPost}
+        likeComment={likeComment}
+        unlikeComment={unlikeComment}
       />
     </>
   )
