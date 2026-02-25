@@ -36,6 +36,8 @@ const myMessagesApi = `${baseApi}/messages/me`
 // feed endpoints
 const feedApi = `${baseApi}/feed`
 const feedUploadApi = `${baseApi}/feed/upload`
+// video-only feed endpoint (GET /feed/videos)
+const feedVideosApi = `${feedApi}/videos`
 
 // builders for feed sub-resources
 const feedCommentsApi = (postId) => `${feedApi}/${postId}/comments`
@@ -84,6 +86,11 @@ async function getFeed(params = {}, config = {}) {
     return await get(feedApi, params, config)
 }
 
+// Convenience wrapper for video-only feed (GET /feed/videos)
+async function getVideoFeed(params = {}, config = {}) {
+    return await get(feedVideosApi, params, config)
+}
+
 export {
     get,
     post,
@@ -91,11 +98,13 @@ export {
     patch,
     del,
     getFeed,
+    getVideoFeed,
     messagesApi,
     messagesUploadApi,
     myMessagesApi,
     feedApi,
     feedUploadApi,
+    feedVideosApi,
     feedCommentsApi,
     feedLikesApi,
     feedViewsApi,

@@ -45,6 +45,14 @@ export class FeedAndMultimediaController {
     return this.service.getFeed();
   }
 
+  // Video-only feed: returns only posts that contain video multimedia.
+  // Must be declared before :id route to avoid being caught by it.
+  @UseGuards(AuthenticatedGuard)
+  @Get('videos')
+  async getVideoFeed() {
+    return this.service.getVideoFeed();
+  }
+
 
   // Get a single post by ID, including its comments and multimedia content if available.
   @UseGuards(AuthenticatedGuard)

@@ -387,6 +387,57 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
 
 
+  // Video feed: return only posts with video type or video multimedia URL
+  async getVideoFeed(limit = 100) {
+    const posts = await this.feedModel
+      .find({
+        $or: [
+          { type: 'video' },
+          { multimediaUrl: { $regex: /\.(mp4|webm|ogg|mov|mkv)/i } },
+        ],
+      })
+      .select(`
+        _id description type author
+        authorFirstName authorLastName
+        multimediaId multimediaUrl thumbnailUrl multimediaStatus
+        likes likesCount commentsCount
+        shares views createdAt updatedAt
+      `)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    // Further client-side filter: only include posts that actually have a video URL
+    return posts
+      .filter((doc: any) => {
+        const url = doc.multimediaUrl || '';
+        return (
+          doc.type === 'video' ||
+          /\.(mp4|webm|ogg|mov|mkv)(\?|$)/i.test(url)
+        );
+      })
+      .map((doc: any) => ({
+        _id: doc._id,
+        description: doc.description,
+        type: doc.type,
+        author: doc.author?.toString(),
+        authorFirstName: doc.authorFirstName || undefined,
+        authorLastName: doc.authorLastName || undefined,
+        multimediaId: doc.multimediaId,
+        multimediaUrl: doc.multimediaUrl || undefined,
+        thumbnailUrl: doc.thumbnailUrl || undefined,
+        likes: Array.isArray(doc.likes) ? doc.likes.map((id: any) => id?.toString()) : [],
+        likesCount: typeof doc.likesCount === 'number' ? doc.likesCount : (Array.isArray(doc.likes) ? doc.likes.length : 0),
+        commentsCount: typeof doc.commentsCount === 'number' ? doc.commentsCount : 0,
+        shares: doc.shares || 0,
+        views: doc.views || 0,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      }));
+  }
+
+
   // Public/global feed: return recent posts visible to any authenticated user
   async getFeed(limit = 50) {
     const posts = await this.feedModel

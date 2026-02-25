@@ -37,13 +37,45 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
   const [error, setError]                 = useState(null)
   const [replyTo, setReplyTo]             = useState(null)
   const [expandedThreads, setExpandedThreads] = useState({})
+  const bottomRef    = useRef(null)
+  const inputRef     = useRef(null)
+  const panelRef     = useRef(null)
+  const listRef      = useRef(null)
+  const prevCountRef = useRef(0)
+  // flag: true when comments state changed from a like (not a new comment) — suppresses auto-scroll
+  const isLikeUpdateRef = useRef(false)
+
   // optimistic like state updater
   const toggleLike = async (comment) => {
     if (!auth || !auth._id) return
     const meId = String(auth._id)
     const liked = Array.isArray(comment.likes) && comment.likes.includes(meId)
+
+    // Preserve scroll position so the list doesn't jump after re-render
+    const list = listRef.current
+    const savedScrollTop = list ? list.scrollTop : 0
+
+    // Signal that this update is NOT a new comment (prevents auto-scroll)
+    isLikeUpdateRef.current = true
+
     // optimistic update
-    setComments(prev => prev.map(c => c._id === comment._id ? ({ ...c, likesCount: (c.likesCount || 0) + (liked ? -1 : 1), likes: liked ? (Array.isArray(c.likes) ? c.likes.filter(id => id !== meId) : []) : ([...(Array.isArray(c.likes) ? c.likes : []), meId]) }) : c))
+    setComments(prev => prev.map(c =>
+      c._id === comment._id
+        ? ({
+            ...c,
+            likesCount: (c.likesCount || 0) + (liked ? -1 : 1),
+            likes: liked
+              ? (Array.isArray(c.likes) ? c.likes.filter(id => id !== meId) : [])
+              : ([...(Array.isArray(c.likes) ? c.likes : []), meId]),
+          })
+        : c
+    ))
+
+    // Restore scroll position on next frame (after React re-renders)
+    requestAnimationFrame(() => {
+      if (list) list.scrollTop = savedScrollTop
+    })
+
     try {
       if (liked) {
         if (typeof unlikeComment === 'function') await unlikeComment(comment._id, post._id)
@@ -55,12 +87,6 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
       try { const fresh = await getComments(post._id); setComments(Array.isArray(fresh) ? fresh : []) } catch (_) {}
     }
   }
-  const bottomRef   = useRef(null)
-  const inputRef    = useRef(null)
-  const panelRef    = useRef(null)
-  const listRef     = useRef(null)
-  const prevCountRef = useRef(0)
-
   /* lock body scroll while open */
   useEffect(() => {
     if (open) {
@@ -95,19 +121,26 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
     return () => { mounted = false }
   }, [open, post, getComments, joinPost])
 
-  /* scroll to bottom when comments arrive (only if user is near bottom) */
+  /* scroll to bottom when NEW comments arrive — skip if it was just a like update */
   useEffect(() => {
-    if (open && comments.length > 0) {
-      const list = listRef.current
-      const nearBottom = list
-        ? (list.scrollHeight - list.scrollTop - list.clientHeight) < 80
-        : true
-      const isFirstLoad = prevCountRef.current === 0
-      if (comments.length > prevCountRef.current && (nearBottom || isFirstLoad)) {
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
-      }
-      prevCountRef.current = comments.length
+    if (!open || comments.length === 0) return
+
+    // If this update was triggered by a like toggle, do NOT scroll — just reset the flag
+    if (isLikeUpdateRef.current) {
+      isLikeUpdateRef.current = false
+      return
     }
+
+    const list = listRef.current
+    const nearBottom = list
+      ? (list.scrollHeight - list.scrollTop - list.clientHeight) < 80
+      : true
+    const isFirstLoad = prevCountRef.current === 0
+
+    if (comments.length > prevCountRef.current && (nearBottom || isFirstLoad)) {
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+    }
+    prevCountRef.current = comments.length
   }, [comments, open])
 
   /* close on Escape */

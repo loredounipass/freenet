@@ -1,4 +1,19 @@
-import { get, getFeed as apiGetFeed, post, postMultipart, del, feedApi, feedUploadApi, feedCommentsApi, feedLikesApi, feedViewsApi, feedPostApi, feedCommentLikesApi, feedSharesApi } from '../api/http'
+import {
+  get,
+  getFeed as apiGetFeed,
+  getVideoFeed as apiGetVideoFeed,
+  post,
+  postMultipart,
+  del,
+  feedApi,
+  feedUploadApi,
+  feedCommentsApi,
+  feedLikesApi,
+  feedViewsApi,
+  feedPostApi,
+  feedCommentLikesApi,
+  feedSharesApi,
+} from '../api/http'
 
 export async function createPost(dto) {
   return await post(feedApi, dto)
@@ -13,10 +28,13 @@ export async function createPostWithFile({ file, description = '', type = 'image
   return await postMultipart(feedUploadApi, form)
 }
 
-// legacy: getMyPosts removed (use getFeed)
-
 export async function getFeed(limit = 50) {
   return await apiGetFeed({ limit })
+}
+
+// Video-only feed — delegates to the dedicated http.js convenience function `getVideoFeed`
+export async function getVideoFeed() {
+  return await apiGetVideoFeed()
 }
 
 export async function getPostById(id) {
@@ -69,9 +87,10 @@ const feedService = {
   createPost,
   createPostWithFile,
   getFeed,
+  getVideoFeed,
   getPostById,
   addComment,
-  getComments,   // ← was missing — caused "No se pudieron cargar los comentarios"
+  getComments,
   likeComment,
   unlikeComment,
   likePost,

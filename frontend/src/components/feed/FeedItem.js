@@ -34,17 +34,42 @@ export default function FeedItem({ post, actions = {} }) {
   const [shareFeedback, setShareFeedback] = useState('')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const containerRef = useRef(null)
+  const videoRef = useRef(null)
   const [viewed, setViewed]             = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [muted, setMuted] = useState(true)
+  const [userPaused, setUserPaused] = useState(false)
 
-  // Keep liked/localLikes in sync when post data updates from socket or re-fetch
-  useEffect(() => {
-    setLiked(isLikedByMe(post))
-    setLocalLikes(post?.likesCount || 0)
-    setLocalShares(post?.shares || 0)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.likes, post?.likesCount, auth?._id])
+  const togglePlay = () => {
+    try {
+      const v = videoRef.current
+      if (!v) return
+      if (v.paused) {
+        v.play().catch(() => {})
+        setPlaying(true)
+        setUserPaused(false)
+      } else {
+        v.pause()
+        setPlaying(false)
+        setUserPaused(true)
+      }
+    } catch (_) {}
+  }
 
-  /* auto-view on scroll */
+  const toggleMuteLocal = (e) => {
+    try {
+      if (e && e.stopPropagation) e.stopPropagation()
+      const v = videoRef.current
+      // toggle muted state locally and update the video element if present
+      setMuted((m) => {
+        const nm = !m
+        try { if (v) v.muted = nm } catch (_) {}
+        return nm
+      })
+    } catch (_) {}
+  }
+
   useEffect(() => {
     if (!post || !post._id || typeof window === 'undefined') return
     const el = containerRef.current
@@ -53,10 +78,25 @@ export default function FeedItem({ post, actions = {} }) {
     try {
       obs = new IntersectionObserver((entries) => {
         entries.forEach(e => {
+          // trigger view tracking when element becomes visible enough
           if (e.isIntersecting && e.intersectionRatio > 0.25 && !viewed) {
             try { viewPost(post._id).catch(() => {}) } catch (_) {}
             setViewed(true)
           }
+
+          // autoplay/pause video when in viewport (use a slightly higher threshold)
+          try {
+            const vid = videoRef.current
+            if (vid) {
+              // play when at least ~25% visible to improve reliability
+              if (e.isIntersecting && e.intersectionRatio >= 0.25) {
+                vid.muted = true
+                vid.play().catch(() => {})
+              } else {
+                vid.pause()
+              }
+            }
+          } catch (_) {}
         })
       }, { threshold: [0.25, 0.5, 1] })
       obs.observe(el)
@@ -216,20 +256,82 @@ export default function FeedItem({ post, actions = {} }) {
         {mediaUrl && (
           <div className="fb-media">
             {isVideo ? (
-              <video
-                onPlay={() => {
-                  if (!viewed) {
-                    try { viewPost(post._id).catch(() => {}) } catch (_) {}
-                    setViewed(true)
-                  }
-                }}
-                controls
-                style={{ width: '100%', maxHeight: '480px', display: 'block', objectFit: 'contain' }}
-                poster={resolveUrl(thumbnailUrl)}
-              >
-                <source src={mediaUrl} type={multimedia?.mimetype || 'video/mp4'} />
-                Tu navegador no soporta la etiqueta de video.
-              </video>
+              <>
+                <div style={{ position: 'relative' }}>
+                <video
+                  ref={videoRef}
+                  onClick={(e) => { e.stopPropagation(); togglePlay() }}
+                  onTimeUpdate={(e) => {
+                    try {
+                      const v = e.currentTarget
+                      if (v && v.duration) setProgress((v.currentTime / v.duration) * 100)
+                    } catch (_) {}
+                  }}
+                  onPlay={() => {
+                    setPlaying(true)
+                    if (!viewed) {
+                      try { viewPost(post._id).catch(() => {}) } catch (_) {}
+                      setViewed(true)
+                    }
+                  }}
+                  onPause={() => setPlaying(false)}
+                  muted={muted}
+                  playsInline
+                  autoPlay
+                  loop
+                  style={{ width: '100%', maxHeight: '480px', display: 'block', objectFit: 'contain', cursor: 'pointer' }}
+                  poster={resolveUrl(thumbnailUrl)}
+                >
+                  <source src={mediaUrl} type={multimedia?.mimetype || 'video/mp4'} />
+                  Tu navegador no soporta la etiqueta de video.
+                </video>
+                  {/* Center play/pause icon */}
+                  {/* Center play/pause icon: show only when NOT playing (so it hides while video plays) */}
+                  {!playing && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 6 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); togglePlay() }}
+                        aria-label={playing ? 'Pausa' : 'Reproducir'}
+                        style={{ pointerEvents: 'auto', background: 'rgba(0,0,0,0.45)', border: 'none', width: 68, height: 68, borderRadius: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Volume button top-right */}
+                  <button onClick={toggleMuteLocal} aria-label={muted ? 'Activar sonido' : 'Silenciar'} style={{ position: 'absolute', right: 12, top: 12, zIndex: 8, background: 'rgba(0,0,0,0.45)', border: 'none', width:36, height:36, borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow: '0 6px 18px rgba(0,0,0,0.4)' }}>
+                    {muted ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <line x1="23" y1="9" x2="17" y2="15" />
+                        <line x1="17" y1="9" x2="23" y2="15" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M19 8a5 5 0 0 1 0 8" />
+                        <path d="M15 5a9 9 0 0 1 0 14" />
+                      </svg>
+                    )}
+                  </button>
+
+                  <div style={{ width: '100%', padding: '6px 12px', position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 7 }}>
+                    <div className="vf-progress-track" style={{ height: 6, borderRadius: 6 }} onClick={(e) => {
+                      try {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        const x = e.clientX - rect.left
+                        const pct = x / rect.width
+                        const vid = videoRef.current
+                        if (vid && vid.duration) vid.currentTime = pct * vid.duration
+                        setProgress(pct * 100)
+                      } catch (_) {}
+                    }}>
+                      <div className="vf-progress-fill" style={{ width: `${progress}%`, height: '100%' }} />
+                    </div>
+                  </div>
+                </div>
+              </>
             ) : (
               <img
                 src={mediaUrl}

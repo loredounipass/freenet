@@ -21,6 +21,8 @@ import ResetPassword from './pages/ResetPassword'
 import ConversationList from './components/chat/ConversationList'
 import ChatView from './components/chat/ChatView'
 import FeedList from './components/feed/FeedList'
+import VideoFeed from './components/videos/VideoFeed'
+import Discover from './components/discover/Discover'
 import { LanguageProvider } from './hooks/LanguageContext';
 import { SocketProvider } from './hooks/SocketContext';
 import './i18n';
@@ -38,41 +40,77 @@ export default function App() {
                     <Box sx={{ display: 'flex' }}>
                         <CssBaseline />
                         <Navbar />
-                        <Box
-                            component="main"
-                            sx={{
-                                backgroundColor: 'transparent',
-                                flexGrow: 1,
-                                height: '100vh',
-                                overflow: 'auto'
-                            }}
-                        >
-                            <Toolbar />
-                            <Container maxWidth="lg" sx={{ mt: 4, mb: 4, position: 'relative' }}>
-                                <Routes>
-                                    <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-                                    <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-                                    <Route path="/feed" element={<PrivateRoute><FeedList /></PrivateRoute>} />
-                                    <Route path="/verifyemail" element={<PrivateRoute><EmailVerificationComponent /></PrivateRoute>} />
-                                    <Route path="/chat" element={<PrivateRoute><ConversationList /></PrivateRoute>} />
-                                    <Route path="/chat/:userId" element={<PrivateRoute><ChatView /></PrivateRoute>} />
-
-                                    <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                                    <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-                                    <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-                                    <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
-                                    <Route path="/verifytoken" element={<PublicRoute><VerifyToken /></PublicRoute>} />
-                                    <Route path="/resendtoken" element={<PublicRoute><ResendTokenForm /></PublicRoute>} />
-                                </Routes>
-
-                            </Container>
-                            <FooterLoader />
-                        </Box>
+                        <MainBox />
                     </Box>
                 </ThemeProvider>
                 </LanguageProvider>
                 </SocketProvider>
             </AuthContext.Provider>
+    )
+}
+
+// Reads location so we can adapt the main Box overflow per route
+function MainBox() {
+    const location = useLocation()
+    const isVideoPage = location.pathname === '/videos'
+    const isDiscoverPage = location.pathname === '/discover'
+
+    return (
+        <Box
+            component="main"
+            sx={{
+                backgroundColor: 'transparent',
+                flexGrow: 1,
+                height: '100vh',
+                overflow: (isVideoPage || isDiscoverPage) ? 'hidden' : 'auto',
+            }}
+        >
+            <Toolbar />
+            <MainContent />
+        </Box>
+    )
+}
+
+
+// Separate component so we can read location after Router context is available
+function MainContent() {
+    const location = useLocation()
+    const isVideoPage = location.pathname === '/videos'
+    const isDiscoverPage = location.pathname === '/discover'
+
+    return (
+        <>
+            <Routes>
+                {/* Full-viewport video page — no Container wrapper */}
+                <Route path="/videos" element={<PrivateRoute><VideoFeed /></PrivateRoute>} />
+                <Route path="/discover" element={<PrivateRoute><WithContainer><Discover /></WithContainer></PrivateRoute>} />
+
+                {/* All other routes inside a centred Container */}
+                <Route path="/" element={<PrivateRoute><WithContainer><Home /></WithContainer></PrivateRoute>} />
+                <Route path="/settings" element={<PrivateRoute><WithContainer><Settings /></WithContainer></PrivateRoute>} />
+                <Route path="/feed" element={<PrivateRoute><WithContainer><FeedList /></WithContainer></PrivateRoute>} />
+                <Route path="/verifyemail" element={<PrivateRoute><WithContainer><EmailVerificationComponent /></WithContainer></PrivateRoute>} />
+                <Route path="/chat" element={<PrivateRoute><WithContainer><ConversationList /></WithContainer></PrivateRoute>} />
+                <Route path="/chat/:userId" element={<PrivateRoute><WithContainer><ChatView /></WithContainer></PrivateRoute>} />
+
+                <Route path="/login" element={<PublicRoute><WithContainer><Login /></WithContainer></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><WithContainer><Register /></WithContainer></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute><WithContainer><ForgotPassword /></WithContainer></PublicRoute>} />
+                <Route path="/reset-password" element={<PublicRoute><WithContainer><ResetPassword /></WithContainer></PublicRoute>} />
+                <Route path="/verifytoken" element={<PublicRoute><WithContainer><VerifyToken /></WithContainer></PublicRoute>} />
+                <Route path="/resendtoken" element={<PublicRoute><WithContainer><ResendTokenForm /></WithContainer></PublicRoute>} />
+            </Routes>
+
+            {!isVideoPage && !isDiscoverPage && <FooterLoader />}
+        </>
+    )
+}
+
+function WithContainer({ children }) {
+    return (
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4, position: 'relative' }}>
+            {children}
+        </Container>
     )
 }
 
