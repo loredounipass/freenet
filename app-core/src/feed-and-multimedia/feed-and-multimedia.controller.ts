@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, UseGuards, Param, Delete, Put, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Param, Delete, Put, UseInterceptors, UploadedFile, BadRequestException, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FeedAndMultimediaService } from './feed-and-multimedia.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -141,7 +142,22 @@ export class FeedAndMultimediaController {
   // Incrementing post views. This endpoint is called when a user views a post, and it increments the view count for that post. The service ensures that the same user cannot increment the view count multiple times in a short period to prevent abuse.
   @UseGuards(AuthenticatedGuard)
   @Post(':id/views')
-  async addView(@Param('id') id: string, @CurrentUser() user: any) {
+  async addView(@Param('id') id: string, @CurrentUser() user: any, @Req() req: Request) {
+    // Ensure session structure for viewed posts
+    const sess: any = (req as any).session || {};
+    sess.viewedPosts = sess.viewedPosts || {};
+
+    // If this post was already viewed in this session, return current post without incrementing
+    if (sess.viewedPosts[id]) {
+      return this.service.getPostById(id);
+    }
+
+    // Mark as viewed in this session and persist via express-session
+    try {
+      sess.viewedPosts[id] = Date.now();
+      (req as any).session = sess;
+    } catch (_) {}
+
     return this.service.incrementView(id, user._id.toString());
   }
 

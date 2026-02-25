@@ -112,6 +112,7 @@ export default function RightSidebar() {
   const sponsored = [
     { id: 's1', title: 'Promoción local', image: '/assets/sponsored1.jpg', url: '#' },
     { id: 's2', title: 'Ofertas cerca de ti', image: '/assets/sponsored2.jpg', url: '#' },
+    { id: 's3', title: 'Promoción local', image: '/assets/sponsored3.jpg', url: '#' },
   ]
 
   // distances removed per request
