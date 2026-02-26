@@ -8,6 +8,7 @@ import LiveTvIcon from '@mui/icons-material/LiveTv';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import ExploreIcon from '@mui/icons-material/Explore';
+import SearchModal from './SearchModal'
 
 function Navbar() {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ function Navbar() {
             <div className="freenet-logo-placeholder navbar-logo" aria-hidden>F</div>
           </Link>
           <div className="nav-search-wrap">
-            <span className="nav-search-icon">
+            <span className="nav-search-icon" onClick={() => setSearchOpen(true)} title="Buscar" style={{cursor:'pointer'}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
@@ -123,6 +125,10 @@ function Navbar() {
             <button onClick={() => handleMenuAction('logout')} className="mobile-item danger">{t('nav.logout')}</button>
           </div>
         </div>
+      )}
+      {/* Search modal */}
+      {searchOpen && (
+        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       )}
     </header>
   );

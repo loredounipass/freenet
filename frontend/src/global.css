@@ -57,6 +57,7 @@ a {
   justify-content: center;
   background: linear-gradient(135deg, #22c1c3, #1e90ff);
   color: #04111a;
+
   font-weight: 700;
 }
 
@@ -562,17 +563,44 @@ a {
 }
 
 @media (max-width: 768px) {
+  /* Keep nav icons visible on small screens; reduce sizes/spacing so they fit */
   .nav-links {
-    display: none
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
+  /* Hide mobile menu toggle (we removed it) */
   .mobile-toggle {
-    display: inline-flex
+    display: none !important;
   }
 
+  /* Show only the magnifier and hide the input */
   .nav-search-wrap {
-    display: none;
+    display: flex;
+    width: 40px;
+    max-width: none;
+    justify-content: center;
   }
+
+  .nav-search-input {
+    display: none !important;
+  }
+
+  .nav-search-icon {
+    left: 6px;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  /* Reduce padding and icon size so items don't wrap/disappear */
+  .nav-link { padding: 0.25rem 0.4rem; }
+  .nav-icon svg { font-size: 1.1rem; }
+
+  /* Slightly larger magnifier on small screens for better touch targets */
+  .nav-search-icon svg { width: 20px; height: 20px; }
 
   .logo-text {
     font-size: 1rem
@@ -1964,7 +1992,7 @@ a {
   display: block;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1366px) {
   .fb-right-sidebar-fixed { display: none; }
 }
 
@@ -1978,9 +2006,19 @@ a {
   display: block;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1366px) {
   .fb-left-sidebar-fixed { display: none; }
 }
+
+/* Hide the right sidebar earlier to avoid overlapping the feed on medium screens */
+@media (max-width: 1366px) {
+  .fb-right-sidebar { display: none; }
+}
+
+/* Ensure sponsored items don't overflow and truncate long text */
+.fb-sponsored-item { min-width: 0; }
+.fb-sponsored-body { min-width: 0; overflow: hidden; }
+.fb-sponsored-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .fb-left-sidebar {
   background: transparent;
@@ -5472,3 +5510,59 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* Search modal styles (added) */
+.search-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 64px;
+  background: rgba(0,0,0,0.35);
+  z-index: 2000;
+}
+
+.search-modal-panel {
+  width: 92%;
+  max-width: 560px;
+  background: var(--fn-dark-card);
+  border: 1px solid var(--fn-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  color: var(--fn-text);
+  overflow: hidden;
+}
+
+.search-modal-header {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+
+.search-modal-header input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--fn-border);
+  background: rgba(255,255,255,0.03);
+  color: var(--fn-text);
+}
+
+.search-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--fn-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.search-modal-body { padding: 8px 12px 16px; }
+.search-modal-empty { color: var(--fn-muted); padding: 20px; text-align: center }
+.search-results { list-style: none; margin:0; padding:0 }
+.search-result-item { padding: 10px; border-radius:8px; display:flex; flex-direction:column; gap:4px }
+.search-result-item:hover { background: rgba(255,255,255,0.02); cursor:pointer }
+.search-result-title { font-weight:700 }
+.search-result-sub { font-size:12px; color:var(--fn-muted) }
