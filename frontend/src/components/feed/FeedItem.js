@@ -39,7 +39,6 @@ export default function FeedItem({ post, actions = {} }) {
   const [progress, setProgress] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(true)
-  const [userPaused, setUserPaused] = useState(false)
 
   const togglePlay = () => {
     try {
@@ -48,11 +47,11 @@ export default function FeedItem({ post, actions = {} }) {
       if (v.paused) {
         v.play().catch(() => {})
         setPlaying(true)
-        setUserPaused(false)
+        // user-initiated play
       } else {
         v.pause()
         setPlaying(false)
-        setUserPaused(true)
+        // user-initiated pause
       }
     } catch (_) {}
   }

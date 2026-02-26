@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { AuthContext } from '../hooks/AuthContext';
 import { useTranslation } from 'react-i18next';
-import DynamicFeedIcon from '@mui/icons-material/DynamicFeed';
+import HomeIcon from '@mui/icons-material/Home';
 import LiveTvIcon from '@mui/icons-material/LiveTv';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
@@ -52,7 +52,7 @@ function Navbar() {
   if (!auth) return null;
 
   const navItems = [
-    { to: '/feed', label: t('nav.feed'), icon: <DynamicFeedIcon />, tone: 'teal' },
+    { to: '/feed', label: t('nav.feed'), icon: <HomeIcon />, tone: 'teal' },
     { to: '/live', label: t('nav.live'), icon: <LiveTvIcon />, tone: 'blue' },
     { to: '/chat', label: t('nav.chat'), icon: <ChatBubbleOutlineIcon />, tone: 'blue' },
     { to: '/videos', label: t('nav.videos'), icon: <VideoLibraryIcon />, tone: 'teal' },
@@ -80,7 +80,7 @@ function Navbar() {
           {navItems.map((n) => (
             <Link key={n.to} to={n.to} className="nav-link">
               <span className={`nav-icon ${n.tone}`}>{n.icon}</span>
-              {n.label}
+              <span className="nav-label">{n.label}</span>
             </Link>
           ))}
         </nav>
@@ -115,7 +115,7 @@ function Navbar() {
             {navItems.map((n) => (
               <Link key={n.to} to={n.to} onClick={() => setMobileOpen(false)} className="mobile-item">
                 <span className={`nav-icon ${n.tone}`}>{n.icon}</span>
-                {n.label}
+                <span className="nav-label">{n.label}</span>
               </Link>
             ))}
             <button onClick={() => handleMenuAction('profile')} className="mobile-item">{t('nav.profile')}</button>

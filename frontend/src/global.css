@@ -405,7 +405,7 @@ a {
 
 .nav-links {
   display: flex;
-  gap: 0.8rem;
+  gap: 1.4rem;
   align-items: center
 }
 
@@ -416,7 +416,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   border-radius: 10px;
   border: 1px solid transparent;
   background: rgba(255, 255, 255, 0.02);
@@ -437,8 +437,13 @@ a {
 }
 
 .nav-icon svg {
-  font-size: 1.05rem
+  font-size: 1.45rem
 }
+
+/* Always hide navbar labels on desktop and mobile */
+.nav-label { display: none !important; }
+.nav-links .nav-link { padding: 0.4rem 0.6rem; }
+.mobile-menu .nav-label { display: none !important; }
 
 .nav-icon.teal {
   color: var(--fn-teal)

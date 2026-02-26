@@ -1,7 +1,6 @@
 import React, { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../../hooks/AuthContext'
-import { useTranslation } from 'react-i18next'
 import DynamicFeedIcon from '@mui/icons-material/DynamicFeed'
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
@@ -11,7 +10,6 @@ import SettingsIcon from '@mui/icons-material/Settings'
 export default function LeftSidebar() {
   const { auth } = useContext(AuthContext)
   const navigate = useNavigate()
-  const { t } = useTranslation()
 
   const first = auth?.firstName || ''
   const last = auth?.lastName || ''
