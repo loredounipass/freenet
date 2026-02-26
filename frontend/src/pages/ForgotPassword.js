@@ -44,7 +44,7 @@ export default function ForgotPassword() {
       <div className="auth-card card-bg">
         <form onSubmit={submit} noValidate>
           <div className="auth-logo">
-            <div className="freenet-logo-placeholder">F</div>
+            <img src="/logo192.png" alt="Freenet" className="auth-logo-img" />
             <div className="auth-title">Restablecer contraseña</div>
           </div>
 
