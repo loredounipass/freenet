@@ -64,13 +64,6 @@ export default function PostForm() {
       {/* Bottom: file picker + button */}
       <div className="fb-post-footer" style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 100%', minWidth: 0 }}>
-          <label className="fb-file-label" htmlFor="post-file-input">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            Foto / Video
-          </label>
           <input
             id="post-file-input"
             className="fb-file-input"
@@ -116,7 +109,23 @@ export default function PostForm() {
             )}
           </div>
         )}
-        <div style={{ flex: '1 1 100%', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+        <div style={{ flex: '1 1 100%', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem', alignItems: 'center', gap: '0.5rem' }}>
+          <label className="fb-file-label" htmlFor="post-file-input" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.3rem', borderRadius: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span>Foto</span>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.3rem', borderRadius: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M5 3v18l15-9z" />
+              </svg>
+              <span>Video</span>
+            </span>
+          </label>
           <button
             className="fb-btn-primary"
             type="submit"

@@ -91,6 +91,13 @@ async function getVideoFeed(params = {}, config = {}) {
     return await get(feedVideosApi, params, config)
 }
 
+// donations (wallets)
+const donationsWalletsApi = `${baseApi}/donations/wallets`
+
+async function getDonationsWallets() {
+    return await get(donationsWalletsApi)
+}
+
 export {
     get,
     post,
@@ -130,4 +137,6 @@ export {
     resetPasswordApi,
     apiOrigin,
     mediaBase,
+    donationsWalletsApi,
+    getDonationsWallets,
 };

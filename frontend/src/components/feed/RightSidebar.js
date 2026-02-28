@@ -211,7 +211,7 @@ export default function RightSidebar() {
 
           {filteredContacts.map((c) => {
             const user = userCache[c.userId] || {}
-            const name = user.firstName || user.name || user.email || `Usuario ${String(c.userId).slice(-4)}`
+            const name = ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.name || user.email || `Usuario ${String(c.userId).slice(-4)}`
             if (!menuToggles.showContacts) return null
             return (
               <button key={c.userId} className="fb-contact-item plain" onClick={() => handleOpenChat(c.userId)}>
