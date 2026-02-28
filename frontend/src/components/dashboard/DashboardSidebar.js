@@ -83,7 +83,7 @@ export default function DashboardSidebar({ activeSection, onNavigate }) {
         </div>
         <div>
           <div className="db-sidebar-brand-title">Panel profesional</div>
-          <div className="db-sidebar-brand-sub">freenet</div>
+          <div className="db-sidebar-brand-sub">Freeus</div>
         </div>
       </div>
 

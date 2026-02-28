@@ -112,8 +112,8 @@ export default function Login() {
       <div className="auth-card card-bg">
         <form onSubmit={handleSubmit} noValidate>
           <div className="auth-logo">
-            <img src="/logo192.png" alt="Freenet" className="auth-logo-img" />
-            <div className="auth-title">FREENET</div>
+            <img src="/logo192.png" alt="Freeus" className="auth-logo-img" />
+            <div className="auth-title">FREEUS</div>
           </div>
 
           <div className="form-group">

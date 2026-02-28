@@ -65,8 +65,8 @@ function Navbar() {
     <header className="site-header">
       <div className="site-inner">
         <div className="site-left">
-          <Link to="/" className="logo" aria-label="Freenet">
-            <img src="/logo192.png" alt="Freenet" className="navbar-logo rounded-full object-cover w-12 h-12" loading="lazy" />
+          <Link to="/" className="logo" aria-label="Freeus">
+            <img src="/logo192.png" alt="Freeus" className="navbar-logo rounded-full object-cover w-12 h-12" loading="lazy" />
           </Link>
           <div className="nav-search-wrap">
             <span className="nav-search-icon" onClick={() => setSearchOpen(true)} title="Buscar" style={{cursor:'pointer'}}>

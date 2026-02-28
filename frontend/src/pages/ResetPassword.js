@@ -69,7 +69,7 @@ export default function ResetPassword() {
       <div className="auth-card card-bg">
         <form onSubmit={submit} noValidate>
           <div className="auth-logo">
-            <img src="/logo192.png" alt="Freenet" className="auth-logo-img" />
+            <img src="/logo192.png" alt="Freeus" className="auth-logo-img" />
             <div className="auth-title">Crear nueva contraseña</div>
           </div>
 

@@ -1,5 +1,5 @@
-# freenet
-freenet is a real-time chat application built with **NestJS** and **React**. It allows users to send and receive messages instantly, providing a smooth and interactive communication experience.
+# Freeus
+Freeus is a real-time chat application built with **NestJS** and **React**. It allows users to send and receive messages instantly, providing a smooth and interactive communication experience.
 
 ---
 

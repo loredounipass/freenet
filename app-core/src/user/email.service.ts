@@ -17,7 +17,7 @@ export class EmailService {
   // Sends a login token email to the user with security tips
   async sendTokenLogin(toEmail: string, token: string): Promise<void> {
     const mailOptions = {
-      from: 'freenet <noreply@freenet.com>',
+      from: 'Freeus <noreply@freeus.com>',
       to: toEmail,
       subject: 'Token de verificación para iniciar sesión',
       html: `
@@ -42,7 +42,7 @@ export class EmailService {
         <body>
             <div class="container">
                 <div class="header">
-                  <h1>freenet</h1>
+                  <h1>Freeus</h1>
                 </div>
                 <div class="content">
                     <p>Hola,</p>
@@ -65,8 +65,8 @@ export class EmailService {
                     </div>
                 </div>
                 <div class="footer">
-                    <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-                    <p>Gracias por usar freenet.</p>
+                  <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+                  <p>Gracias por usar Freeus.</p>
                 </div>
             </div>
         </body>
@@ -119,7 +119,7 @@ export class EmailService {
         <body>
           <div class="container">
               <div class="header">
-              <h1>freenet</h1>
+              <h1>Freeus</h1>
             </div>
             <div class="content">
               <p class="lead">Hola,</p>
@@ -136,7 +136,7 @@ export class EmailService {
             </div>
               <div class="footer">
               <div>Consejos para proteger tu cuenta: utiliza 2FA y no compartas tus credenciales.</div>
-              <div style="margin-top:8px">Gracias por usar freenet.</div>
+              <div style="margin-top:8px">Gracias por usar Freeus.</div>
             </div>
           </div>
         </body>
@@ -183,7 +183,7 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>freenet</h1>
+              <h1>Freeus</h1>
             </div>
             <div class="content">
               <p class="lead">Hola,</p>
@@ -201,7 +201,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <div>Consejos para proteger tu cuenta: utiliza 2FA y no compartas tus credenciales.</div>
-              <div style="margin-top:8px">Gracias por usar freenet.</div>
+              <div style="margin-top:8px">Gracias por usar Freeus.</div>
             </div>
           </div>
         </body>
@@ -244,7 +244,7 @@ export class EmailService {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>freenet</h1>
+                  <h1>Freeus</h1>
                 </div>
                 <div class="content">
                     <p>Hola,</p>
@@ -263,8 +263,8 @@ export class EmailService {
                     </div>
                 </div>
                 <div class="footer">
-                    <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-                    <p>Gracias por usar freenet.</p>
+                  <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+                  <p>Gracias por usar Freeus.</p>
                 </div>
             </div>
         </body>

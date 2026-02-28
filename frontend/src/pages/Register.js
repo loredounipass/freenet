@@ -43,8 +43,8 @@ export default function Register() {
       <div className="auth-card card-bg">
         <form onSubmit={handleSubmit} noValidate>
           <div className="auth-logo">
-            <img src="/logo192.png" alt="Freenet" className="auth-logo-img" />
-            <div className="auth-title">Join Freenet</div>
+            <img src="/logo192.png" alt="Freeus" className="auth-logo-img" />
+            <div className="auth-title">Join Freeus</div>
           </div>
 
           <div className="form-group">

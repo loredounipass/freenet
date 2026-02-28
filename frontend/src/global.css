@@ -238,7 +238,10 @@ a {
 .error-note {
   margin-top: 0.5rem;
   color: #ff7b7b;
-  font-size: 0.875rem
+  font-size: 0.875rem;
+  text-align: center;
+  display: block;
+  width: 100%;
 }
 
 /* Global footer styles */
@@ -1947,7 +1950,7 @@ a {
 @tailwind utilities;
 
 :root {
-  /* Brand colors — matching the Freenet login dark palette */
+  /* Brand colors — matching the Freeus login dark palette */
   --fn-teal: #22c1c3;
   --fn-blue: #1e90ff;
   --fn-dark: #0b0f13;
