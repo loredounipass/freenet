@@ -51,7 +51,7 @@ const getMessagePreview = (message, isOwnMessage, t) => {
  *  - currentUserId: string
  *  - onClick: () => void
  */
-export default function ConversationItem({ conversation, selected, currentUserId, onClick }) {
+export default function ConversationItem({ conversation, selected, currentUserId, onClick, profilePhotoUrl }) {
   const { t } = useTranslation();
 
   const { firstName = '', lastName = '', lastMessage, unreadCount = 0 } = conversation;
@@ -73,7 +73,7 @@ export default function ConversationItem({ conversation, selected, currentUserId
         className="conv-item-avatar"
         style={{ background: getAvatarGradient(firstName) }}
       >
-        {initial}
+        {profilePhotoUrl ? <img src={profilePhotoUrl} alt={fullName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : initial}
       </div>
 
       {/* Body */}

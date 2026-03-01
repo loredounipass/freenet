@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { apiOrigin } from '../../api/http'
 
 /** Generates a deterministic gradient based on a name. */
 const getAvatarGradient = (name) => {
@@ -32,6 +33,11 @@ export default function ChatHeader({ user, connected }) {
   const lastName = user?.lastName || '';
   const fullName = `${firstName} ${lastName}`.trim() || user?.email || 'Usuario';
   const initial = firstName ? firstName.charAt(0).toUpperCase() : '?';
+  function resolveProfilePhotoUrl(url) {
+    if (!url) return null
+    return url.startsWith('/') ? `${apiOrigin}${url}` : url
+  }
+  const profilePhoto = resolveProfilePhotoUrl(user?.profilePhotoUrl || user?.profilePhoto || user?.photoUrl || user?.photo || user?.avatarUrl)
 
   return (
     <header className="chat-header">
@@ -45,7 +51,7 @@ export default function ChatHeader({ user, connected }) {
         className="chat-avatar"
         style={{ background: getAvatarGradient(firstName) }}
       >
-        {initial}
+        {profilePhoto ? <img src={profilePhoto} alt={fullName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : initial}
       </div>
 
       <div className="chat-meta">

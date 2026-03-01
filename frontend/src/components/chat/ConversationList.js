@@ -4,6 +4,7 @@ import { AuthContext } from '../../hooks/AuthContext';
 import useMessagesAndMultimedia from '../../hooks/useMessagesAndMultimedia';
 import { useTranslation } from 'react-i18next';
 import ConversationItem from './ConversationItem';
+import { apiOrigin } from '../../api/http'
 import NewChatDialog from './NewChatDialog';
 import User from '../../services/user';
 
@@ -113,6 +114,11 @@ export default function ConversationList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations.length]);
 
+  function resolveProfilePhotoUrl(url) {
+    if (!url) return null
+    return url.startsWith('/') ? `${apiOrigin}${url}` : url
+  }
+
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
@@ -180,19 +186,21 @@ export default function ConversationList() {
           ) : (
             filteredConversations.map((conv) => {
               const user = userCache[conv.userId] || {};
+              const profilePhoto = resolveProfilePhotoUrl(user.profilePhotoUrl || user.profilePhoto || user.photoUrl || user.photo || user.avatarUrl)
               return (
-                <ConversationItem
-                  key={conv.userId}
-                  conversation={{
-                    ...conv,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                  }}
-                  selected={false}
-                  currentUserId={currentUserId}
-                  onClick={() => handleSelectConversation(conv.userId)}
-                />
+                  <ConversationItem
+                    key={conv.userId}
+                    conversation={{
+                      ...conv,
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      email: user.email,
+                    }}
+                    profilePhotoUrl={profilePhoto}
+                    selected={false}
+                    currentUserId={currentUserId}
+                    onClick={() => handleSelectConversation(conv.userId)}
+                  />
               );
             })
           )}

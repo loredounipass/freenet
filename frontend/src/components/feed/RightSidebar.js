@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../../hooks/AuthContext'
 import useMessagesAndMultimedia from '../../hooks/useMessagesAndMultimedia'
 import User from '../../services/user'
+import { apiOrigin } from '../../api/http'
 import { useTranslation } from 'react-i18next'
 
 export default function RightSidebar() {
@@ -103,6 +104,11 @@ export default function RightSidebar() {
     })()
     return () => { mounted = false }
   }, [contacts, userCache])
+
+  function resolveProfilePhotoUrl(url) {
+    if (!url) return null
+    return url.startsWith('/') ? `${apiOrigin}${url}` : url
+  }
 
   const handleOpenChat = (uid) => {
     try { joinChat(uid) } catch (_) {}
@@ -212,10 +218,11 @@ export default function RightSidebar() {
           {filteredContacts.map((c) => {
             const user = userCache[c.userId] || {}
             const name = ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.name || user.email || `Usuario ${String(c.userId).slice(-4)}`
+            const thumb = resolveProfilePhotoUrl(user.profilePhotoUrl || user.profilePhoto || user.photoUrl || user.photo || user.avatarUrl)
             if (!menuToggles.showContacts) return null
             return (
               <button key={c.userId} className="fb-contact-item plain" onClick={() => handleOpenChat(c.userId)}>
-                <div className="fb-contact-avatar">{(user.firstName && user.firstName[0]) || 'U'}</div>
+                <div className="fb-contact-avatar">{thumb ? <img src={thumb} alt={name} /> : ((user.firstName && user.firstName[0]) || 'U')}</div>
                 <div className="fb-contact-info">
                   <div style={{display:'flex', alignItems:'center', gap:'0.5rem'}}>
                     <div className="fb-contact-name">{name}</div>
