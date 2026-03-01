@@ -33,6 +33,18 @@ export default function PostForm() {
     }
   }
 
+  const handleDiscard = (e) => {
+    e.preventDefault()
+    setDescription('')
+    setFile(null)
+    if (previewUrl) {
+      try { URL.revokeObjectURL(previewUrl) } catch (_) {}
+      setPreviewUrl(null)
+    }
+    const input = document.getElementById('post-file-input')
+    if (input) input.value = ''
+  }
+
   const displayName = auth
     ? `${auth.firstName || ''} ${auth.lastName || ''}`.trim() || auth.username || 'Tú'
     : 'Tú'
@@ -133,6 +145,16 @@ export default function PostForm() {
           >
             {loading ? 'Publicando…' : 'Publicar'}
           </button>
+          {(file || description.trim().length > 0) && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleDiscard}
+              disabled={loading}
+            >
+              Descartar
+            </button>
+          )}
         </div>
       </div>
     </form>

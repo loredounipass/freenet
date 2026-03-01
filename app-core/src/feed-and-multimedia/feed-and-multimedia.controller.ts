@@ -25,7 +25,8 @@ export class FeedAndMultimediaController {
 
   // Separate endpoint for creating a post with a file upload. This allows clients to upload multimedia content along with the post data.
   @UseGuards(AuthenticatedGuard)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  // Increase fileSize limit to support longer videos (approx 250MB)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 250 * 1024 * 1024 } }))
   @Post('upload')
   async createWithFile(@UploadedFile() file: Express.Multer.File, @Body() body: any, @CurrentUser() user: any) {
     if (!file) throw new BadRequestException('File missing');
@@ -34,7 +35,6 @@ export class FeedAndMultimediaController {
     if (file.mimetype && file.mimetype.startsWith('audio/')) {
       throw new BadRequestException('Audio uploads are not supported for feed posts');
     }
-
     return this.service.createPostWithFile(file, body, user._id.toString());
   }
 
@@ -45,6 +45,7 @@ export class FeedAndMultimediaController {
   async getFeed() {
     return this.service.getFeed();
   }
+
 
   // Video-only feed: returns only posts that contain video multimedia.
   // Must be declared before :id route to avoid being caught by it.
@@ -62,6 +63,7 @@ export class FeedAndMultimediaController {
     return this.service.getPostById(id);
   }
 
+
   // Post update/delete
   @UseGuards(AuthenticatedGuard)
   @Put(':id')
@@ -76,6 +78,7 @@ export class FeedAndMultimediaController {
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     return this.service.deletePost(id, user._id.toString());
   }
+
 
   // Comment creation, retrieval, deletion, and liking/unliking. Comments can be nested (replies) and are associated with a specific post.
   @UseGuards(AuthenticatedGuard)
@@ -157,10 +160,11 @@ export class FeedAndMultimediaController {
       sess.viewedPosts[id] = Date.now();
       (req as any).session = sess;
     } catch (_) {}
-
     return this.service.incrementView(id, user._id.toString());
   }
 
+
+  
   // Increment share count on a post. Called when a user shares a post.
   @UseGuards(AuthenticatedGuard)
   @Post(':id/shares')

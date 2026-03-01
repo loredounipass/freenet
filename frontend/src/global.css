@@ -2404,11 +2404,11 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.55rem 1.1rem;
+  padding: 0.55rem 1.25rem;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
-  color: var(--fn-muted);
-  font-weight: 600;
+  color: #04111a;
+  font-weight: 700;
   font-size: 0.9rem;
   border: 1px solid var(--fn-border);
   cursor: pointer;

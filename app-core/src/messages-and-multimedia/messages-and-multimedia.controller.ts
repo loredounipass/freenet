@@ -16,9 +16,10 @@ export class MessagesAndMultimediaController {
     return this.service.createMessage(dto, user._id.toString());
   }
 
+
   @UseGuards(AuthenticatedGuard)
-    // Limit uploads to 10MB by default to avoid OOM on large files
-    @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+    // Limit uploads increased to allow longer videos (configurable): 250MB
+    @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 250 * 1024 * 1024 } }))
   @Post('upload')
   async createWithFile(@UploadedFile() file: Express.Multer.File, @Body() body: any, @CurrentUser() user: any) {
     if (!file) throw new BadRequestException('File missing');
@@ -36,6 +37,8 @@ export class MessagesAndMultimediaController {
       return this.service.createMessageWithFile(file, dto, user._id.toString());
   }
 
+
+  
   @UseGuards(AuthenticatedGuard)
   @Get('me')
   async getMyMessages(@CurrentUser() user: any) {

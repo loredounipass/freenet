@@ -176,6 +176,18 @@ export class MultimediaProcessor {
             } catch (_) {}
             // attach to metadata later
             (metadata as any).duration = durationSec;
+            // enforce maximum allowed duration (5 minutes)
+            try {
+              const MAX_VIDEO_SECONDS = 5 * 60; // 5 minutes
+              if (durationSec && durationSec > MAX_VIDEO_SECONDS) {
+                // mark multimedia as failed and clean up uploaded staging file
+                try {
+                  await this.multimediaModel.findByIdAndUpdate(multimediaId, { status: 'failed', lastError: 'duration exceeds 5 minutes' }).exec();
+                } catch (_) {}
+                try { await fsPromises.unlink(tempIn); } catch (_) {}
+                throw new Error('Video duration exceeds maximum allowed length (5 minutes)');
+              }
+            } catch (_) {}
             if (width) (metadata as any).width = width;
             if (height) (metadata as any).height = height;
           } catch (probeErr) {
