@@ -49,7 +49,13 @@ export default function LeftSidebar() {
 
   return (
     <div className="fb-left-sidebar" style={{padding:'0.5rem', display:'flex', flexDirection:'column', gap:12}}>
-      <div className="fb-left-profile" style={{display:'flex', alignItems:'center', gap:10}}>
+      <button
+        type="button"
+        onClick={() => nav('/profile')}
+        className="fb-left-profile"
+        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit', textAlign: 'left' }}
+        aria-label="Ir a mi perfil"
+      >
         <div
           className="fb-left-avatar"
           style={{
@@ -73,12 +79,12 @@ export default function LeftSidebar() {
             (auth?.firstName && auth.firstName[0]) || (auth?.name && auth.name[0]) || 'U'
           )}
         </div>
-        <div style={{display:'flex', flexDirection:'column'}}>
-          <div className="fb-left-name" style={{fontWeight:700, color:'var(--fn-text)', fontSize:14}}>{name}</div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="fb-left-name" style={{ fontWeight: 700, color: 'var(--fn-text)', fontSize: 14 }}>{name}</div>
         </div>
-      </div>
+      </button>
 
-      <div style={{borderTop:'1px solid var(--fn-border)', paddingTop:8}} />
+      <div style={{ borderTop: '1px solid var(--fn-border)', paddingTop: 8 }} />
 
       <div className="fb-left-nav" style={{display:'flex', flexDirection:'column', gap:16}}>
         <button className="fb-left-item nav-link" onClick={() => nav('/')} style={buttonStyle()} aria-label="dashboard">

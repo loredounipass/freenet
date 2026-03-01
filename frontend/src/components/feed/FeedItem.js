@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react'
+import { Link } from 'react-router-dom'
 import { mediaBase, apiOrigin } from '../../api/http'
 import CommentsPanel from './CommentsPanel'
 import NewChatDialog from '../chat/NewChatDialog'
@@ -239,15 +240,22 @@ export default function FeedItem({ post, actions = {}, currentUserPhotoUrl = nul
           display: 'flex', alignItems: 'center',
           gap: '0.75rem', padding: '1rem 1.25rem 0.85rem',
         }}>
-          <div className="fb-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Link
+            to={post.author ? `/profile/${post.author}` : '/profile'}
+            className="fb-avatar"
+            style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'inherit', flexShrink: 0 }}
+            aria-label={isMyPost ? 'Ir a mi perfil' : `Ver perfil de ${displayName}`}
+          >
             {authorPhotoUrl ? (
               <img src={authorPhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               initials(displayName)
             )}
-          </div>
+          </Link>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="fb-author">{displayName}</div>
+            <Link to={post.author ? `/profile/${post.author}` : '/profile'} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className="fb-author">{displayName}</div>
+            </Link>
             <div className="fb-time">{timeStr}</div>
           </div>
         </div>

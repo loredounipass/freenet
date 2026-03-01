@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
 import useProfile from '../../hooks/useProfile'
 import { AuthContext } from '../../hooks/AuthContext'
@@ -11,6 +12,7 @@ function resolveProfilePhotoUrl(url) {
 }
 
 export default function PostForm() {
+  const navigate = useNavigate()
   const { createPostWithFile, createPost, loading } = useFeedAndMultimedia()
   const { auth } = useContext(AuthContext)
   const { profile } = useProfile()
@@ -114,14 +116,17 @@ export default function PostForm() {
     <form onSubmit={onSubmit} className="fb-post-form">
       {/* Top: avatar + textarea */}
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-        {/* Avatar */}
-        <div
+        {/* Avatar: clic para ir a mi perfil */}
+        <button
+          type="button"
+          onClick={() => navigate('/profile')}
+          aria-label="Ir a mi perfil"
           style={{
             width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
             background: profilePhotoUrl ? 'transparent' : 'linear-gradient(135deg,#22c1c3,#1e90ff)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 700, fontSize: '1rem', color: '#04111a',
-            overflow: 'hidden',
+            overflow: 'hidden', border: 'none', cursor: 'pointer', padding: 0,
           }}
         >
           {profilePhotoUrl ? (
@@ -129,7 +134,7 @@ export default function PostForm() {
           ) : (
             displayName ? displayName[0].toUpperCase() : '?'
           )}
-        </div>
+        </button>
         <textarea
           className="fb-post-textarea"
           placeholder={`¿Qué estás pensando, ${displayName.split(' ')[0]}?`}

@@ -94,9 +94,14 @@ function Navbar() {
             </svg>
           </button>
 
-          <div className="avatar-wrap" ref={menuRef}>
-            <button onClick={() => setMenuOpen((s) => !s)} className="avatar-btn" style={{ backgroundColor: getAvatarColor(auth.firstName) }} aria-label="user menu">
-              {auth.firstName.charAt(0)}
+          <div className="avatar-wrap" ref={menuRef} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link to="/profile" className="avatar-btn" style={{ backgroundColor: getAvatarColor(auth.firstName), textDecoration: 'none', color: 'inherit' }} aria-label="Ir a mi perfil">
+              {auth.firstName ? auth.firstName.charAt(0) : '?'}
+            </Link>
+            <button onClick={() => setMenuOpen((s) => !s)} className="avatar-dropdown-trigger" aria-label="Menú de usuario" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--fn-text)', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="6" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="18" r="1.5" />
+              </svg>
             </button>
 
             {menuOpen && (
