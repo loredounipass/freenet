@@ -1,11 +1,20 @@
 import React, { useState, useContext, useEffect } from 'react'
 import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
+import useProfile from '../../hooks/useProfile'
 import { AuthContext } from '../../hooks/AuthContext'
+import { apiOrigin } from '../../api/http'
 import Toast from '../toasts/Toast'
+
+function resolveProfilePhotoUrl(url) {
+  if (!url) return null
+  return url.startsWith('/') ? `${apiOrigin}${url}` : url
+}
 
 export default function PostForm() {
   const { createPostWithFile, createPost, loading } = useFeedAndMultimedia()
   const { auth } = useContext(AuthContext)
+  const { profile } = useProfile()
+  const profilePhotoUrl = resolveProfilePhotoUrl(profile?.profilePhotoUrl)
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -109,12 +118,17 @@ export default function PostForm() {
         <div
           style={{
             width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg,#22c1c3,#1e90ff)',
+            background: profilePhotoUrl ? 'transparent' : 'linear-gradient(135deg,#22c1c3,#1e90ff)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: '1rem', color: '#04111a'
+            fontWeight: 700, fontSize: '1rem', color: '#04111a',
+            overflow: 'hidden',
           }}
         >
-          {displayName ? displayName[0].toUpperCase() : '?'}
+          {profilePhotoUrl ? (
+            <img src={profilePhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            displayName ? displayName[0].toUpperCase() : '?'
+          )}
         </div>
         <textarea
           className="fb-post-textarea"

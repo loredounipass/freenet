@@ -1,12 +1,21 @@
 import React from 'react'
 import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
+import useProfile from '../../hooks/useProfile'
 import FeedItem from './FeedItem'
 import PostForm from './PostForm'
 import RightSidebar from './RightSidebar'
 import LeftSidebar from './LeftSidebar'
+import { apiOrigin } from '../../api/http'
+
+function resolveProfilePhotoUrl(url) {
+  if (!url) return null
+  return url.startsWith('/') ? `${apiOrigin}${url}` : url
+}
 
 export default function FeedList() {
   const { posts, loading, likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost } = useFeedAndMultimedia()
+  const { profile } = useProfile()
+  const currentUserPhotoUrl = resolveProfilePhotoUrl(profile?.profilePhotoUrl)
 
   return (
     <>
@@ -33,6 +42,7 @@ export default function FeedList() {
             <FeedItem
               key={p._id}
               post={p}
+              currentUserPhotoUrl={currentUserPhotoUrl}
               actions={{ likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost }}
             />
           ))}

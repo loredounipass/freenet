@@ -3,21 +3,27 @@ import btcLogo from '../../assets/bitcoin-btc-logo.svg'
 import usdtLogo from '../../assets/tether-usdt-logo.svg'
 import { useNavigate } from 'react-router-dom'
 import useDonations from '../../hooks/useDonations'
+import useProfile from '../../hooks/useProfile'
 import { AuthContext } from '../../hooks/AuthContext'
+import { apiOrigin } from '../../api/http'
 import DynamicFeedIcon from '@mui/icons-material/DynamicFeed'
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
 import ExploreIcon from '@mui/icons-material/Explore'
 import SettingsIcon from '@mui/icons-material/Settings'
 
+function resolveProfilePhotoUrl(url) {
+  if (!url) return null
+  return url.startsWith('/') ? `${apiOrigin}${url}` : url
+}
+
 export default function LeftSidebar() {
   const { auth } = useContext(AuthContext)
+  const { profile } = useProfile()
   const [copied, setCopied] = useState({ btc: false, usdt: false })
   const navigate = useNavigate()
+  const profilePhotoUrl = resolveProfilePhotoUrl(profile?.profilePhotoUrl)
 
-  // donation wallet addresses are retrieved from the server so they
-  // don't get baked into the client bundle. the backend reads them from
-  // its own environment variables (BTC_ADDRESS/USDT_ADDRESS).
   const { wallets } = useDonations()
   const btcAddress = wallets.btc
   const usdtAddress = wallets.usdt
@@ -44,8 +50,28 @@ export default function LeftSidebar() {
   return (
     <div className="fb-left-sidebar" style={{padding:'0.5rem', display:'flex', flexDirection:'column', gap:12}}>
       <div className="fb-left-profile" style={{display:'flex', alignItems:'center', gap:10}}>
-        <div className="fb-left-avatar" style={{width:56, height:56, borderRadius:'50%', backgroundColor:'var(--fn-primary)', color:'var(--fn-on-primary)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:18}}>
-          { (auth?.firstName && auth.firstName[0]) || (auth?.name && auth.name[0]) || 'U' }
+        <div
+          className="fb-left-avatar"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            backgroundColor: profilePhotoUrl ? 'transparent' : 'var(--fn-primary)',
+            color: 'var(--fn-on-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: 18,
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}
+        >
+          {profilePhotoUrl ? (
+            <img src={profilePhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            (auth?.firstName && auth.firstName[0]) || (auth?.name && auth.name[0]) || 'U'
+          )}
         </div>
         <div style={{display:'flex', flexDirection:'column'}}>
           <div className="fb-left-name" style={{fontWeight:700, color:'var(--fn-text)', fontSize:14}}>{name}</div>

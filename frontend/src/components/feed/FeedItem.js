@@ -14,9 +14,11 @@ function initials(name) {
     : name[0].toUpperCase()
 }
 
-export default function FeedItem({ post, actions = {} }) {
+export default function FeedItem({ post, actions = {}, currentUserPhotoUrl = null }) {
   const { likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost } = actions
   const { auth } = useContext(AuthContext)
+  const isMyPost = post && auth?._id && String(post.author) === String(auth._id)
+  const authorPhotoUrl = isMyPost ? currentUserPhotoUrl : null
 
   // Derive initial liked state from post.likes array (contains user IDs)
   const isLikedByMe = (p) => {
@@ -237,7 +239,13 @@ export default function FeedItem({ post, actions = {} }) {
           display: 'flex', alignItems: 'center',
           gap: '0.75rem', padding: '1rem 1.25rem 0.85rem',
         }}>
-          <div className="fb-avatar">{initials(displayName)}</div>
+          <div className="fb-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {authorPhotoUrl ? (
+              <img src={authorPhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              initials(displayName)
+            )}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="fb-author">{displayName}</div>
             <div className="fb-time">{timeStr}</div>
