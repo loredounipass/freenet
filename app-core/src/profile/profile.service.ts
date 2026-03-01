@@ -46,6 +46,60 @@ export class ProfileService {
     return publicView;
   }
 
+  /** Returns whether the current user follows the target profile owner. */
+  async getFollowStatus(currentUserId: string, targetUserId: string): Promise<{ following: boolean }> {
+    if (!currentUserId || !Types.ObjectId.isValid(currentUserId)) throw new BadRequestException('Invalid current user id');
+    if (!targetUserId || !Types.ObjectId.isValid(targetUserId)) throw new BadRequestException('Invalid target user id');
+    const target = await this.profileModel.findOne({ owner: new Types.ObjectId(targetUserId) }).lean().exec();
+    if (!target) throw new NotFoundException('Profile not found');
+    const followers = (target as any).followers || [];
+    const following = followers.some((id: Types.ObjectId) => id.toString() === currentUserId);
+    return { following };
+  }
+
+  /** Adds current user as follower of target and adds target to current user's following. */
+  async follow(currentUserId: string, targetUserId: string) {
+    if (!currentUserId || !Types.ObjectId.isValid(currentUserId)) throw new BadRequestException('Invalid current user id');
+    if (!targetUserId || !Types.ObjectId.isValid(targetUserId)) throw new BadRequestException('Invalid target user id');
+    if (currentUserId === targetUserId) throw new BadRequestException('Cannot follow yourself');
+    const currentOid = new Types.ObjectId(currentUserId);
+    const targetOid = new Types.ObjectId(targetUserId);
+    await this.profileModel.findOneAndUpdate(
+      { owner: targetOid },
+      { $addToSet: { followers: currentOid } },
+      { upsert: true, new: true },
+    ).exec();
+    await this.profileModel.findOneAndUpdate(
+      { owner: currentOid },
+      { $addToSet: { following: targetOid } },
+      { upsert: true, new: true },
+    ).exec();
+    const target = await this.profileModel.findOne({ owner: targetOid }).lean().exec();
+    const followersCount = Array.isArray((target as any).followers) ? (target as any).followers.length : 0;
+    return { following: true, followersCount };
+  }
+
+  /** Removes current user from target's followers and target from current user's following. */
+  async unfollow(currentUserId: string, targetUserId: string) {
+    if (!currentUserId || !Types.ObjectId.isValid(currentUserId)) throw new BadRequestException('Invalid current user id');
+    if (!targetUserId || !Types.ObjectId.isValid(targetUserId)) throw new BadRequestException('Invalid target user id');
+    const currentOid = new Types.ObjectId(currentUserId);
+    const targetOid = new Types.ObjectId(targetUserId);
+    await this.profileModel.findOneAndUpdate(
+      { owner: targetOid },
+      { $pull: { followers: currentOid } },
+      { new: true },
+    ).exec();
+    await this.profileModel.findOneAndUpdate(
+      { owner: currentOid },
+      { $pull: { following: targetOid } },
+      { new: true },
+    ).exec();
+    const target = await this.profileModel.findOne({ owner: targetOid }).lean().exec();
+    const followersCount = target ? (Array.isArray((target as any).followers) ? (target as any).followers.length : 0) : 0;
+    return { following: false, followersCount };
+  }
+
   async upsert(userId: string, dto: UpdateProfileDto) {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
     const data: any = { ...dto };

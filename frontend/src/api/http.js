@@ -91,6 +91,16 @@ async function getVideoFeed(params = {}, config = {}) {
     return await get(feedVideosApi, params, config)
 }
 
+// profile endpoints
+const profileApi = `${baseApi}/profile`
+const profileMeApi = `${profileApi}/me`
+const profileByIdApi = (id) => `${profileApi}/${id}`
+const profileUploadProfilePhotoApi = `${profileApi}/upload/profile-photo`
+const profileUploadCoverPhotoApi = `${profileApi}/upload/cover-photo`
+const profileFollowStatusApi = (id) => `${profileApi}/${id}/follow-status`
+const profileFollowApi = (id) => `${profileApi}/${id}/follow`
+const profileUnfollowApi = (id) => `${profileApi}/${id}/unfollow`
+
 // donations (wallets)
 const donationsWalletsApi = `${baseApi}/donations/wallets`
 
@@ -137,6 +147,14 @@ export {
     resetPasswordApi,
     apiOrigin,
     mediaBase,
+    profileApi,
+    profileMeApi,
+    profileByIdApi,
+    profileUploadProfilePhotoApi,
+    profileUploadCoverPhotoApi,
+    profileFollowStatusApi,
+    profileFollowApi,
+    profileUnfollowApi,
     donationsWalletsApi,
     getDonationsWallets,
 };

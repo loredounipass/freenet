@@ -23,6 +23,7 @@ import ChatView from './components/chat/ChatView'
 import FeedList from './components/feed/FeedList'
 import VideoFeed from './components/videos/VideoFeed'
 import Discover from './components/discover/Discover'
+import UserProfile from './components/profile/userProfile'
 import { LanguageProvider } from './hooks/LanguageContext';
 import { SocketProvider } from './hooks/SocketContext';
 import './i18n';
@@ -89,6 +90,8 @@ function MainContent() {
                 <Route path="/" element={<PrivateRoute><WithContainer><Home /></WithContainer></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><WithContainer><Settings /></WithContainer></PrivateRoute>} />
                 <Route path="/feed" element={<PrivateRoute><WithContainer><FeedList /></WithContainer></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
+                <Route path="/profile/:userId" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
                 <Route path="/verifyemail" element={<PrivateRoute><WithContainer><EmailVerificationComponent /></WithContainer></PrivateRoute>} />
                 <Route path="/chat" element={<PrivateRoute><WithContainer><ConversationList /></WithContainer></PrivateRoute>} />
                 <Route path="/chat/:userId" element={<PrivateRoute><WithContainer><ChatView /></WithContainer></PrivateRoute>} />

@@ -39,6 +39,24 @@ export class ProfileController {
   async uploadCoverPhoto(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     return this.service.uploadImage(user._id.toString(), file, 'cover');
   }
+
+  @UseGuards(AuthenticatedGuard)
+  @Get(':id/follow-status')
+  async getFollowStatus(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.getFollowStatus(user._id.toString(), id);
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Post(':id/follow')
+  async follow(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.follow(user._id.toString(), id);
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Post(':id/unfollow')
+  async unfollow(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.unfollow(user._id.toString(), id);
+  }
 }
 
 export default {};
