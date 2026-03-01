@@ -9,6 +9,8 @@ import * as profileService from '../services/profile';
 export default function useProfile(options = {}) {
     const { userId: viewUserId } = options;
     const [profile, setProfile] = useState(null);
+    const [posts, setPosts] = useState([]);
+    const [postsLoading, setPostsLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -25,11 +27,38 @@ export default function useProfile(options = {}) {
                     const statusRes = await profileService.getFollowStatus(viewUserId);
                     const following = (statusRes?.data ?? statusRes)?.following ?? false;
                     setProfile({ ...data, isFollowing: following });
+                    // load posts for viewed profile
+                    try {
+                        setPostsLoading(true);
+                        const postsRes = await profileService.getProfilePosts(viewUserId, 50);
+                        const postsData = postsRes?.data ?? postsRes;
+                        setPosts(postsData || []);
+                    } catch (_) {
+                        setPosts([]);
+                    } finally {
+                        setPostsLoading(false);
+                    }
                 } catch (_) {
                     setProfile({ ...data, isFollowing: false });
                 }
             } else {
                 setProfile(data);
+                // load posts for own profile (owner id included in profile doc)
+                try {
+                    const ownerId = data?.owner || undefined;
+                    if (ownerId) {
+                        setPostsLoading(true);
+                        const postsRes = await profileService.getProfilePosts(ownerId, 50);
+                        const postsData = postsRes?.data ?? postsRes;
+                        setPosts(postsData || []);
+                    } else {
+                        setPosts([]);
+                    }
+                } catch (_) {
+                    setPosts([]);
+                } finally {
+                    setPostsLoading(false);
+                }
             }
         } catch (err) {
             setError(err);
@@ -96,6 +125,8 @@ export default function useProfile(options = {}) {
 
     return {
         profile,
+        posts,
+        postsLoading,
         loading,
         error,
         refetch: loadProfile,

@@ -4,7 +4,7 @@ const DEFAULT_TABS = [
     { id: 'all', label: 'Todo' },
     { id: 'about', label: 'Información' },
     { id: 'photos', label: 'Fotos' },
-    { id: 'friends', label: 'Amigos' },
+    { id: 'videos', label: 'Videos' },
     { id: 'more', label: 'Más' },
 ];
 

@@ -5,9 +5,9 @@ import { AuthContext } from '../../hooks/AuthContext';
 import ProfileCover from './ProfileCover';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileInfo from './ProfileInfo';
+import ProfileContactInfo from './ProfileContactInfo';
 import ProfileTabs from './ProfileTabs';
 import ProfileSidebar from './ProfileSidebar';
-import ProfilePostBox from './ProfilePostBox';
 
 /**
  * Página principal de perfil de usuario. Diseño tipo Facebook: portada, avatar, nombre, acciones, pestañas y dos columnas (sidebar + publicaciones).
@@ -27,6 +27,8 @@ export default function UserProfile() {
         follow,
         unfollow,
         isOwnProfile,
+        posts,
+        postsLoading,
     } = useProfile({ userId: userId || undefined });
 
     const [activeTab, setActiveTab] = useState('all');
@@ -131,21 +133,20 @@ export default function UserProfile() {
                 <div className="profile-header-content">
                     <ProfileAvatar
                         profilePhotoUrl={profile?.profilePhotoUrl}
-                        firstName={profile?.firstName}
-                        lastName={profile?.lastName}
+                        firstName={profile?.firstName || auth?.firstName || ''}
+                        lastName={profile?.lastName || auth?.lastName || ''}
                         onEditPhoto={handleEditPhoto}
                         canEdit={isOwnProfile && !uploadingAvatar}
                     />
                     <ProfileInfo
-                        firstName={profile?.firstName}
-                        lastName={profile?.lastName}
+                        firstName={profile?.firstName || auth?.firstName || ''}
+                        lastName={profile?.lastName || auth?.lastName || ''}
                         followersCount={profile?.followersCount ?? 0}
                         followingCount={profile?.followingCount ?? 0}
                         bio={profile?.bio}
                         isOwnProfile={isOwnProfile}
                         isFollowing={profile?.isFollowing}
                         onDashboard={isOwnProfile ? handleDashboard : undefined}
-                        onEditProfile={isOwnProfile ? handleEditProfile : undefined}
                         onFollow={!isOwnProfile ? handleFollow : undefined}
                         onUnfollow={!isOwnProfile ? handleUnfollow : undefined}
                         followLoading={followLoading}
@@ -163,31 +164,55 @@ export default function UserProfile() {
                     onEditDetails={handleEditDetails}
                 />
                 <main className="profile-main">
-                    {isOwnProfile && (
-                        <ProfilePostBox profile={profile} onCompose={() => navigate('/feed')} />
-                    )}
-                    <section className="profile-feed-section mt-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold" style={{ color: 'var(--fn-text)' }}>
-                                Publicaciones
-                            </h2>
-                            {isOwnProfile && (
-                                <div className="flex gap-2">
-                                    <button type="button" className="profile-tab profile-tab-active text-sm">
-                                        Lista
-                                    </button>
-                                    <button type="button" className="profile-tab text-sm">
-                                        Cuadrícula
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        <p className="text-sm" style={{ color: 'var(--fn-muted)' }}>
-                            {isOwnProfile
-                                ? 'Tus publicaciones aparecerán aquí. Crea una desde el feed.'
-                                : 'Las publicaciones de este usuario aparecerán aquí.'}
-                        </p>
-                    </section>
+                    {/* Posts / Media gallery */}
+                    {activeTab === 'all' || activeTab === 'photos' || activeTab === 'videos' ? (
+                        <section className="profile-posts">
+                            {postsLoading ? (
+                                <p style={{ color: 'var(--fn-muted)' }}>Cargando publicaciones...</p>
+                            ) : (() => {
+                                // Filter posts according to active tab
+                                const isVideoPost = (p) => {
+                                    const url = p.multimediaUrl || '';
+                                    return p.type === 'video' || /\.(mp4|webm|ogg|mov|mkv)(\?|$)/i.test(url);
+                                };
+                                const filteredPosts = (posts || []).filter((p) => {
+                                    if (activeTab === 'videos') return isVideoPost(p);
+                                    if (activeTab === 'photos') return !isVideoPost(p);
+                                    return true; // 'all'
+                                });
+
+                                if (filteredPosts.length === 0) {
+                                    const emptyText = activeTab === 'videos' ? 'No hay videos publicados.' : activeTab === 'photos' ? 'No hay fotos publicadas.' : 'No hay fotos o videos publicados.';
+                                    return <p style={{ color: 'var(--fn-muted)' }}>{emptyText}</p>;
+                                }
+
+                                return (
+                                    <div className="posts-grid">
+                                        {filteredPosts.map((p) => (
+                                            <div key={p._id} className="post-thumb">
+                                                <img
+                                                    src={p.thumbnailUrl || p.multimediaUrl}
+                                                    alt={p.description || ''}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </section>
+                    ) : null}
+
+                    {activeTab === 'about' ? (
+                        <ProfileContactInfo
+                            firstName={profile?.firstName || auth?.firstName || ''}
+                            lastName={profile?.lastName || auth?.lastName || ''}
+                            email={isOwnProfile ? auth?.email || profile?.email : profile?.email}
+                            phone={profile?.phone || profile?.phoneNumber}
+                            isOwnProfile={isOwnProfile}
+                            onEditProfile={isOwnProfile ? handleEditProfile : undefined}
+                        />
+                    ) : null}
                 </main>
             </div>
         </div>

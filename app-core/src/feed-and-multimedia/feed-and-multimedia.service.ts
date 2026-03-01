@@ -879,4 +879,42 @@ export class FeedAndMultimediaService implements OnModuleInit {
     try { this.eventEmitter.emit('post.updated', out); } catch (_) {}
     return out;
   }
+
+  // Get posts by author (public): return recent posts for a specific user
+  async getPostsByAuthor(authorId: string, limit = 50) {
+    if (!authorId || !Types.ObjectId.isValid(authorId)) throw new BadRequestException('Invalid author id');
+
+    const posts = await this.feedModel
+      .find({ author: new Types.ObjectId(authorId) })
+      .select(`
+        _id description type author
+        authorFirstName authorLastName
+        multimediaId multimediaUrl thumbnailUrl multimediaStatus
+        likes likesCount commentsCount
+        shares views createdAt updatedAt
+      `)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    return posts.map((doc: any) => ({
+      _id: doc._id,
+      description: doc.description,
+      type: doc.type,
+      author: doc.author?.toString(),
+      authorFirstName: doc.authorFirstName || undefined,
+      authorLastName: doc.authorLastName || undefined,
+      multimediaId: doc.multimediaId,
+      multimediaUrl: doc.multimediaUrl || undefined,
+      thumbnailUrl: doc.thumbnailUrl || undefined,
+      likes: Array.isArray(doc.likes) ? doc.likes.map((id: any) => id?.toString()) : [],
+      likesCount: typeof doc.likesCount === 'number' ? doc.likesCount : (Array.isArray(doc.likes) ? doc.likes.length : 0),
+      commentsCount: typeof doc.commentsCount === 'number' ? doc.commentsCount : 0,
+      shares: doc.shares || 0,
+      views: doc.views || 0,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    }));
+  }
 }

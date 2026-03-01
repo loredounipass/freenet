@@ -5,6 +5,7 @@ import { ProfileController } from './profile.controller';
 import { Profile, ProfileSchema } from './schemas/profile.schema';
 import { UserModule } from '../user/user.module';
 import { LocalStorageProvider } from '../storage/local.storage.provider';
+import { FeedAndMultimediaModule } from '../feed-and-multimedia/feed-and-multimedia.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { LocalStorageProvider } from '../storage/local.storage.provider';
       { name: Profile.name, schema: ProfileSchema },
     ]),
     forwardRef(() => UserModule),
+    forwardRef(() => FeedAndMultimediaModule),
   ],
   controllers: [ProfileController],
   providers: [ProfileService, LocalStorageProvider],

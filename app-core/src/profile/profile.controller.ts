@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Get, Post, Body, UseInterceptors, UploadedFile, Param } from '@nestjs/common';
+import { Controller, UseGuards, Get, Post, Body, UseInterceptors, UploadedFile, Param, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProfileService } from './profile.service';
 import { AuthenticatedGuard } from 'src/guard/auth/authenticated.guard';
@@ -44,6 +44,13 @@ export class ProfileController {
   @Get(':id/follow-status')
   async getFollowStatus(@Param('id') id: string, @CurrentUser() user: any) {
     return this.service.getFollowStatus(user._id.toString(), id);
+  }
+
+  // Public: list photos & videos posted by profile owner (for profile media tab)
+  @Get(':id/posts')
+  async getPostsByProfile(@Param('id') id: string, @Query('limit') limit?: string) {
+    const l = limit ? parseInt(limit, 10) : 50;
+    return this.service.getPostsForProfile(id, l);
   }
 
   @UseGuards(AuthenticatedGuard)

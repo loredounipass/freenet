@@ -1,9 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
+import User from '../services/user'
+import { apiOrigin } from '../api/http'
+import { AuthContext } from '../hooks/AuthContext'
 
-export default function SearchModal({ open, onClose }) {
+export default function SearchModal({ open, onClose, initialQuery }) {
   const ref = useRef(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
+  const navigate = useNavigate()
+  const { auth } = useContext(AuthContext)
+  
+  // When the modal opens with an `initialQuery` (from navbar input), prefill the input.
+  useEffect(() => {
+    if (!open) return
+    if (initialQuery && initialQuery !== query) {
+      setQuery(initialQuery)
+    }
+  }, [open, initialQuery, query]);
+
+  function resolveProfilePhotoUrl(url) {
+    if (!url) return null
+    return url.startsWith('/') ? `${apiOrigin}${url}` : url
+  }
 
   useEffect(() => {
     if (!open) return
@@ -19,16 +38,25 @@ export default function SearchModal({ open, onClose }) {
   }, [open])
 
   useEffect(() => {
-    // simple fake search results for demo; replace with real API as needed
+    if (!open) return
     if (!query || query.trim().length < 1) return setResults([])
-    const q = query.toLowerCase()
-    const demo = [
-      { id: 'r1', title: 'Personas', subtitle: 'Buscar personas' },
-      { id: 'r2', title: 'Publicaciones', subtitle: 'Buscar publicaciones' },
-      { id: 'r3', title: 'Grupos', subtitle: 'Buscar grupos' },
-    ]
-    setResults(demo.filter(d => d.title.toLowerCase().includes(q) || d.subtitle.toLowerCase().includes(q)))
-  }, [query])
+
+    let mounted = true
+    const t = setTimeout(async () => {
+      try {
+        const res = await User.searchUsers(query)
+        const data = res?.data ?? res
+        if (!mounted) return
+        // Expect an array of user docs
+        setResults(Array.isArray(data) ? data : (data?.data || []))
+      } catch (err) {
+        if (!mounted) return
+        setResults([])
+      }
+    }, 250)
+
+    return () => { mounted = false; clearTimeout(t) }
+  }, [query, open])
 
   if (!open) return null
 
@@ -52,12 +80,36 @@ export default function SearchModal({ open, onClose }) {
 
           {results.length > 0 && (
             <ul className="search-results">
-              {results.map(r => (
-                <li key={r.id} className="search-result-item">
-                  <div className="search-result-title">{r.title}</div>
-                  <div className="search-result-sub">{r.subtitle}</div>
-                </li>
-              ))}
+              {results.map((r) => {
+                const id = r._id || r.id || r.userId
+                const name = [r.firstName, r.lastName].filter(Boolean).join(' ') || r.username || r.name || 'Usuario'
+                const thumb = resolveProfilePhotoUrl(r.profilePhotoUrl)
+                return (
+                  <li
+                    key={id}
+                    className="search-result-item"
+                    onClick={() => {
+                      onClose();
+                      if (!id) return;
+                      // If the result is the current authenticated user, navigate to own profile route
+                      const myId = auth?._id || auth?.id || auth?._userId || auth?._id?.toString();
+                      if (myId && id && id.toString() === myId.toString()) {
+                        navigate('/profile');
+                      } else {
+                        navigate(`/profile/${id}`);
+                      }
+                    }}
+                    style={{ cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center' }}
+                  >
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: '#222', flexShrink:0, display:'inline-block' }}>
+                      {thumb ? <img src={thumb} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <div style={{ width: '100%', height: '100%' }} />}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                      <div className="search-result-title" aria-label={`Usuario ${name}`} style={{ marginLeft: 6 }}>{name}</div>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>

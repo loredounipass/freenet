@@ -38,9 +38,20 @@ export default function ProfileCover({ coverPhotoUrl, onEditCover, canEdit, clas
                         ref={inputRef}
                         type="file"
                         accept="image/*"
-                        className="hidden"
                         onChange={handleFileChange}
                         aria-label="Subir foto de portada"
+                        // Position the input exactly over the visible button so
+                        // the native file picker opens when the user clicks.
+                        style={{
+                            position: 'absolute',
+                            bottom: '16px',
+                            right: '16px',
+                            width: '160px',
+                            height: '40px',
+                            opacity: 0,
+                            zIndex: 5,
+                            cursor: 'pointer',
+                        }}
                     />
                     <button
                         type="button"

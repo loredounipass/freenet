@@ -10,6 +10,7 @@ import {
     profileFollowStatusApi,
     profileFollowApi,
     profileUnfollowApi,
+    profilePostsApi,
 } from '../api/http';
 
 /**
@@ -24,6 +25,13 @@ export async function getMyProfile() {
  */
 export async function getProfileById(userId) {
     return await get(profileByIdApi(userId), {});
+}
+
+/**
+ * Obtiene posts (fotos/videos) publicados por el usuario con userId.
+ */
+export async function getProfilePosts(userId, limit = 50) {
+    return await get(profilePostsApi(userId), { limit });
 }
 
 /**

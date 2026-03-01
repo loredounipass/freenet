@@ -2,6 +2,8 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { AuthContext } from '../hooks/AuthContext';
+import { apiOrigin } from '../api/http';
+import * as profileService from '../services/profile';
 import { useTranslation } from 'react-i18next';
 import HomeIcon from '@mui/icons-material/Home';
 import LiveTvIcon from '@mui/icons-material/LiveTv';
@@ -17,7 +19,9 @@ function Navbar() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -27,6 +31,19 @@ function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadProfile() {
+      try {
+        const res = await profileService.getMyProfile();
+        const data = res?.data ?? res;
+        if (mounted && data?.profilePhotoUrl) setProfilePhoto(data.profilePhotoUrl);
+      } catch (_) { /* ignore */ }
+    }
+    if (auth) loadProfile();
+    return () => { mounted = false };
+  }, [auth]);
 
   const handleMenuAction = async (key) => {
     setMenuOpen(false);
@@ -51,6 +68,11 @@ function Navbar() {
     return colors[name.charCodeAt(0) % colors.length];
   };
 
+  function resolveImageUrl(url) {
+    if (!url) return null;
+    return url.startsWith('/') ? `${apiOrigin}${url}` : url;
+  }
+
   if (!auth) return null;
 
   const navItems = [
@@ -65,7 +87,7 @@ function Navbar() {
     <header className="site-header">
       <div className="site-inner">
         <div className="site-left">
-          <Link to="/" className="logo" aria-label="Freeus">
+          <Link to="/feed" className="logo" aria-label="Freeus">
             <img src="/logo192.png" alt="Freeus" className="navbar-logo rounded-full object-cover w-12 h-12" loading="lazy" />
           </Link>
           <div className="nav-search-wrap">
@@ -74,7 +96,18 @@ function Navbar() {
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
             </span>
-            <input className="nav-search-input" placeholder="Buscar" />
+            <input
+              className="nav-search-input"
+              placeholder="Buscar"
+              value={searchQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSearchQuery(v);
+                // open modal and forward query to it
+                if (!searchOpen) setSearchOpen(true);
+              }}
+              onFocus={() => { if (!searchOpen) setSearchOpen(true) }}
+            />
           </div>
         </div>
 
@@ -95,13 +128,28 @@ function Navbar() {
           </button>
 
           <div className="avatar-wrap" ref={menuRef} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link to="/profile" className="avatar-btn" style={{ backgroundColor: getAvatarColor(auth.firstName), textDecoration: 'none', color: 'inherit' }} aria-label="Ir a mi perfil">
-              {auth.firstName ? auth.firstName.charAt(0) : '?'}
-            </Link>
-            <button onClick={() => setMenuOpen((s) => !s)} className="avatar-dropdown-trigger" aria-label="Menú de usuario" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--fn-text)', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="6" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="18" r="1.5" />
-              </svg>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((s) => !s)}
+              className="avatar-btn"
+              aria-label="Menú de usuario"
+              style={{
+                backgroundColor: getAvatarColor(auth.firstName),
+                textDecoration: 'none',
+                color: 'inherit',
+                border: 'none',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              {profilePhoto || auth.profilePhotoUrl ? (
+                <img src={resolveImageUrl(profilePhoto || auth.profilePhotoUrl)} alt="avatar" className="navbar-logo rounded-full object-cover w-10 h-10" />
+              ) : (
+                <span style={{ width: 40, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{auth.firstName ? auth.firstName.charAt(0) : '?'}</span>
+              )}
             </button>
 
             {menuOpen && (
@@ -133,7 +181,7 @@ function Navbar() {
       )}
       {/* Search modal */}
       {searchOpen && (
-        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+        <SearchModal open={searchOpen} initialQuery={searchQuery} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} />
       )}
     </header>
   );

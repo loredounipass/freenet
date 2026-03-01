@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Profile, ProfileDocument } from './schemas/profile.schema';
+import { FeedAndMultimediaService } from 'src/feed-and-multimedia/feed-and-multimedia.service';
+import { UserService } from 'src/user/user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { LocalStorageProvider } from '../storage/local.storage.provider';
 import sharp from 'sharp';
@@ -12,6 +14,8 @@ export class ProfileService {
   constructor(
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     private readonly storage: LocalStorageProvider,
+    private readonly feedService: FeedAndMultimediaService,
+    private readonly userService: UserService,
   ) {}
 
   async getByOwner(userId: string) {
@@ -24,26 +28,58 @@ export class ProfileService {
   async getPublicById(userId: string) {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
     const doc: any = await this.profileModel.findOne({ owner: new Types.ObjectId(userId) }).lean().exec();
-    if (!doc) throw new NotFoundException('Profile not found');
 
-    const publicView = {
-      owner: doc.owner?.toString(),
-      firstName: doc.firstName,
-      lastName: doc.lastName,
-      links: doc.links || [],
-      gender: doc.gender,
-      relationshipStatus: doc.relationshipStatus,
-      interests: doc.interests || [],
-      bio: doc.bio,
-      likes: doc.likes || 0,
-      profilePhotoUrl: doc.profilePhotoUrl,
-      coverPhotoUrl: doc.coverPhotoUrl,
-      followersCount: Array.isArray(doc.followers) ? doc.followers.length : 0,
-      followingCount: Array.isArray(doc.following) ? doc.following.length : 0,
-      createdAt: doc.createdAt,
-    };
+    if (doc) {
+      const publicView = {
+        owner: doc.owner?.toString(),
+        firstName: doc.firstName,
+        lastName: doc.lastName,
+        links: doc.links || [],
+        gender: doc.gender,
+        relationshipStatus: doc.relationshipStatus,
+        interests: doc.interests || [],
+        bio: doc.bio,
+        likes: doc.likes || 0,
+        profilePhotoUrl: doc.profilePhotoUrl,
+        coverPhotoUrl: doc.coverPhotoUrl,
+        followersCount: Array.isArray(doc.followers) ? doc.followers.length : 0,
+        followingCount: Array.isArray(doc.following) ? doc.following.length : 0,
+        createdAt: doc.createdAt,
+      };
+      return publicView;
+    }
 
-    return publicView;
+    // If no profile document exists, try to return a minimal public view from the User
+    try {
+      const user = await this.userService.getUserById(userId);
+      if (!user) throw new NotFoundException('Profile not found');
+      const publicView = {
+        owner: user._id?.toString(),
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        links: [],
+        gender: undefined,
+        relationshipStatus: undefined,
+        interests: [],
+        bio: undefined,
+        likes: 0,
+        profilePhotoUrl: (user as any).profilePhotoUrl || undefined,
+        coverPhotoUrl: undefined,
+        followersCount: 0,
+        followingCount: 0,
+        createdAt: (user as any).createdAt,
+      };
+      return publicView;
+    } catch (err) {
+      throw new NotFoundException('Profile not found');
+    }
+  }
+
+  // Public: get photos/videos posted by a given user (for profile media tab)
+  async getPostsForProfile(userId: string, limit = 50) {
+    if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
+    const posts = await this.feedService.getPostsByAuthor(userId, limit);
+    return posts;
   }
 
   /** Returns whether the current user follows the target profile owner. */

@@ -33,25 +33,40 @@ const messagesApi = `${baseApi}/messages`
 const messagesUploadApi = `${baseApi}/messages/upload`
 const myMessagesApi = `${baseApi}/messages/me`
 
+
 // feed endpoints
 const feedApi = `${baseApi}/feed`
 const feedUploadApi = `${baseApi}/feed/upload`
-// video-only feed endpoint (GET /feed/videos)
 const feedVideosApi = `${feedApi}/videos`
+
 
 // builders for feed sub-resources
 const feedCommentsApi = (postId) => `${feedApi}/${postId}/comments`
 const feedLikesApi = (postId) => `${feedApi}/${postId}/likes`
 const feedViewsApi = (postId) => `${feedApi}/${postId}/views`
 const feedSharesApi = (postId) => `${feedApi}/${postId}/shares`
-// builder for single post resource
 const feedPostApi = (postId) => `${feedApi}/${postId}`
-// builders for comment-specific resources (by comment id)
 const feedCommentByIdApi = (commentId) => `${feedApi}/comments/${commentId}`
 const feedCommentLikesApi = (commentId) => `${feedApi}/comments/${commentId}/likes`
 
+
+// profile endpoints
+const profileApi = `${baseApi}/profile`
+const profileMeApi = `${profileApi}/me`
+const profileByIdApi = (id) => `${profileApi}/${id}`
+const profileUploadProfilePhotoApi = `${profileApi}/upload/profile-photo`
+const profileUploadCoverPhotoApi = `${profileApi}/upload/cover-photo`
+const profileFollowStatusApi = (id) => `${profileApi}/${id}/follow-status`
+const profileFollowApi = (id) => `${profileApi}/${id}/follow`
+const profileUnfollowApi = (id) => `${profileApi}/${id}/unfollow`
+const profilePostsApi = (id) => `${profileApi}/${id}/posts`
+
+
 // endpoints de búsqueda de usuarios
 const searchUsersApi = `${baseApi}/user/search`
+
+// donations (wallets)
+const donationsWalletsApi = `${baseApi}/donations/wallets`
 
 
 
@@ -91,18 +106,7 @@ async function getVideoFeed(params = {}, config = {}) {
     return await get(feedVideosApi, params, config)
 }
 
-// profile endpoints
-const profileApi = `${baseApi}/profile`
-const profileMeApi = `${profileApi}/me`
-const profileByIdApi = (id) => `${profileApi}/${id}`
-const profileUploadProfilePhotoApi = `${profileApi}/upload/profile-photo`
-const profileUploadCoverPhotoApi = `${profileApi}/upload/cover-photo`
-const profileFollowStatusApi = (id) => `${profileApi}/${id}/follow-status`
-const profileFollowApi = (id) => `${profileApi}/${id}/follow`
-const profileUnfollowApi = (id) => `${profileApi}/${id}/unfollow`
 
-// donations (wallets)
-const donationsWalletsApi = `${baseApi}/donations/wallets`
 
 async function getDonationsWallets() {
     return await get(donationsWalletsApi)
@@ -150,6 +154,7 @@ export {
     profileApi,
     profileMeApi,
     profileByIdApi,
+    profilePostsApi,
     profileUploadProfilePhotoApi,
     profileUploadCoverPhotoApi,
     profileFollowStatusApi,

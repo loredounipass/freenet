@@ -136,11 +136,7 @@ export default function ProfileSidebar({
                 </SidebarCard>
             )}
 
-            {!hasPersonalDetails && !hasLinks && !hasInterests && (
-                <SidebarCard title="Información" canEdit={isOwnProfile} onEdit={onEditDetails}>
-                    <p className="text-sm">Aún no hay información. {isOwnProfile ? 'Edita tu perfil para añadirla.' : ''}</p>
-                </SidebarCard>
-            )}
+            {/* Removed fallback 'Información' card per UI request */}
         </aside>
     );
 }

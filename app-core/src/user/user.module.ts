@@ -4,6 +4,7 @@ import { UserController } from './user.controller';
 import { HashService } from './hash.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
+import { Profile, ProfileSchema } from 'src/profile/schemas/profile.schema';
 import { AuthService } from '../auth/auth.service';
 import { TwoFactorAuthModule } from 'src/two-factor/verification.module';
 import { EmailModule } from './email.module';
@@ -17,6 +18,8 @@ import { ForgotPasswordService } from './forgot.password.service';
       name: User.name,
       schema: UserSchema
     }])
+    ,
+    MongooseModule.forFeature([{ name: Profile.name, schema: ProfileSchema }])
   ],
   controllers: [UserController],
   providers: [

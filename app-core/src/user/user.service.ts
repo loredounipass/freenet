@@ -3,6 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { Model } from 'mongoose';
+import { Profile, ProfileDocument } from 'src/profile/schemas/profile.schema';
 import { HashService } from './hash.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile';
@@ -13,6 +14,7 @@ import { EmailService } from './email.service';
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     private hashService: HashService,
     private emailService: EmailService
   ) {}
@@ -251,7 +253,24 @@ async sendVerificationEmail(email: string): Promise<boolean> {
       or.push({ _id: q });
     }
 
-    const users = await this.userModel.find({ $or: or }).limit(20).select('-password').exec();
+    const users = await this.userModel.find({ $or: or }).limit(20).select('-password').lean().exec();
+
+    // Fetch profile photos for the matching users and merge into results so frontend can render avatars
+    try {
+      const ids = users.map((u: any) => u._id).filter(Boolean);
+      if (ids.length > 0) {
+        const profiles = await this.profileModel.find({ owner: { $in: ids } }).select('owner profilePhotoUrl').lean().exec();
+        const photoMap: Record<string, string> = {};
+        for (const p of profiles) {
+          if (p && p.owner) photoMap[p.owner.toString()] = (p as any).profilePhotoUrl || '';
+        }
+        return users.map((u: any) => ({ ...u, profilePhotoUrl: photoMap[u._id?.toString()] || undefined }));
+      }
+    } catch (err) {
+      // if profile lookup fails, just return users without photos
+      return users;
+    }
+
     return users;
   }
 }
