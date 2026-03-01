@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react'
 import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
 import { AuthContext } from '../../hooks/AuthContext'
+import Toast from '../toasts/Toast'
 
 export default function PostForm() {
   const { createPostWithFile, createPost, loading } = useFeedAndMultimedia()
@@ -8,6 +9,7 @@ export default function PostForm() {
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [toast, setToast] = useState('')
   // ensure object URL is revoked on unmount
   useCleanupPreview(previewUrl)
 
@@ -29,7 +31,57 @@ export default function PostForm() {
       e.target.reset()
     } catch (err) {
       console.error(err)
-      alert('Error creando el post')
+      setToast('Error creando el post')
+    }
+  }
+
+  // handle file input with video duration validation (max 5 minutes)
+  const handleFileChange = (e) => {
+    const f = e.target.files[0]
+    // clear any previous toast
+    if (toast) setToast('')
+
+    // revoke previous preview
+    if (previewUrl) { try { URL.revokeObjectURL(previewUrl) } catch(_) {} }
+
+    if (!f) {
+      setFile(null)
+      setPreviewUrl(null)
+      return
+    }
+
+    if (f.type && f.type.startsWith('video')) {
+      // create a temporary URL to read metadata
+      const metaUrl = URL.createObjectURL(f)
+      const vid = document.createElement('video')
+      vid.preload = 'metadata'
+      vid.src = metaUrl
+      vid.onloadedmetadata = () => {
+        try { URL.revokeObjectURL(metaUrl) } catch(_) {}
+        const duration = vid.duration || 0
+        const maxSeconds = 5 * 60 // 5 minutes
+        if (duration > maxSeconds) {
+          setToast('Los videos no pueden superar 5 minutos.')
+          setFile(null)
+          setPreviewUrl(null)
+          e.target.value = ''
+        } else {
+          // accepted: set file and preview
+          setFile(f)
+          try { const url = URL.createObjectURL(f); setPreviewUrl(url) } catch(_) { setPreviewUrl(null) }
+        }
+      }
+      vid.onerror = () => {
+        try { URL.revokeObjectURL(metaUrl) } catch(_) {}
+        setToast('No se pudo leer el archivo de video.')
+        setFile(null)
+        setPreviewUrl(null)
+        e.target.value = ''
+      }
+    } else {
+      // image or other file types
+      setFile(f)
+      try { const url = URL.createObjectURL(f); setPreviewUrl(url) } catch(_) { setPreviewUrl(null) }
     }
   }
 
@@ -81,18 +133,7 @@ export default function PostForm() {
             className="fb-file-input"
             type="file"
             accept="image/*,video/*"
-            onChange={(e) => {
-              const f = e.target.files[0]
-              // revoke previous preview
-              if (previewUrl) { try { URL.revokeObjectURL(previewUrl) } catch(_) {} }
-              setFile(f)
-              if (f) {
-                const url = URL.createObjectURL(f)
-                setPreviewUrl(url)
-              } else {
-                setPreviewUrl(null)
-              }
-            }}
+            onChange={(e) => handleFileChange(e)}
           />
           {file && (
             <span className="fb-file-name" title={file.name}>
@@ -157,6 +198,7 @@ export default function PostForm() {
           )}
         </div>
       </div>
+      <Toast message={toast} onDismiss={() => setToast('')} />
     </form>
   )
 }

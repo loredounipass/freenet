@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import Toast from '../toasts/Toast'
 
 /**
  * ChatInput - Message input bar with text field, file attach, and send button.
@@ -14,6 +15,7 @@ export default function ChatInput({ onSendMessage, onSendFile, disabled = false 
   const [text, setText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [toast, setToast] = useState('');
   const [sending, setSending] = useState(false);
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -161,18 +163,43 @@ export default function ChatInput({ onSendMessage, onSendFile, disabled = false 
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      try {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      } catch (_) {
+    if (!file) return;
+
+    // clear previous toast
+    if (toast) setToast('')
+
+    // if video, validate duration (max 5 minutes)
+    if (file.type && file.type.startsWith('video')) {
+      const metaUrl = URL.createObjectURL(file);
+      const vid = document.createElement('video');
+      vid.preload = 'metadata';
+      vid.src = metaUrl;
+      vid.onloadedmetadata = () => {
+        try { URL.revokeObjectURL(metaUrl); } catch(_) {}
+        const duration = vid.duration || 0;
+        const maxSeconds = 5 * 60;
+        if (duration > maxSeconds) {
+          setToast('Los videos no pueden superar 5 minutos.');
+          // reset input
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          setSelectedFile(null);
+          setPreviewUrl(null);
+        } else {
+          setSelectedFile(file);
+          try { const url = URL.createObjectURL(file); setPreviewUrl(url); } catch(_) { setPreviewUrl(null); }
+        }
+      };
+      vid.onerror = () => {
+        try { URL.revokeObjectURL(metaUrl); } catch(_) {}
+        setToast('No se pudo leer el archivo de video.');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setSelectedFile(null);
         setPreviewUrl(null);
-      }
-    }
-    // Reset input so same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      };
+    } else {
+      setSelectedFile(file);
+      try { const url = URL.createObjectURL(file); setPreviewUrl(url); } catch(_) { setPreviewUrl(null); }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -182,6 +209,7 @@ export default function ChatInput({ onSendMessage, onSendFile, disabled = false 
       setPreviewUrl(null);
     }
     setSelectedFile(null);
+    if (toast) setToast('')
   };
 
   return (
@@ -281,6 +309,7 @@ export default function ChatInput({ onSendMessage, onSendFile, disabled = false 
           )}
         </div>
       </div>
+      <Toast message={toast} onDismiss={() => setToast('')} />
     </div>
   );
 }
