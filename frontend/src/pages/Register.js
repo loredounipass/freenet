@@ -62,10 +62,7 @@ export default function Register() {
             <input name="email" type="email" required className="form-input" placeholder="Email Address" />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Username</label>
-            <input name="username" required className="form-input" placeholder="Username" />
-          </div>
+          
 
           <div className="form-group">
             <label className="form-label">Password</label>
