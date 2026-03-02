@@ -3,6 +3,8 @@ import useVideos from '../../hooks/useVideos'
 import { AuthContext } from '../../hooks/AuthContext'
 import { apiOrigin } from '../../api/http'
 import CommentsPanel from '../feed/CommentsPanel'
+import UserAvatar from '../common/UserAvatar'
+import * as profileService from '../../services/profile'
 
 /* ── helpers ── */
 function initials(name) {
@@ -41,7 +43,7 @@ function resolveUrl(u) {
 
 
 /* ── Single Video Card (fullscreen-scroll style like Meta Reels/Watch) ── */
-function VideoCard({ post, isActive, actions, currentUserId }) {
+function VideoCard({ post, isActive, actions, currentUserId, currentUserProfile }) {
   const videoRef = useRef(null)
   const containerRef = useRef(null)
   const [playing, setPlaying] = useState(false)
@@ -57,9 +59,21 @@ function VideoCard({ post, isActive, actions, currentUserId }) {
   const [localViews, setLocalViews] = useState(post?.views || 0)
   const [viewTracked, setViewTracked] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const [authorProfile, setAuthorProfile] = useState(null)
   const controlsTimerRef = useRef(null)
 
   const { likeVideo, unlikeVideo, viewVideo, shareVideo, getComments, addComment, joinPost } = actions
+
+  // Load author profile (only for other users' videos)
+  const isMyVideo = post && currentUserId && String(post.author) === String(currentUserId)
+  useEffect(() => {
+    if (isMyVideo || !post?.author) return
+    let cancelled = false
+    profileService.getProfileById(String(post.author))
+      .then((res) => { if (!cancelled) setAuthorProfile((res?.data ?? res)) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [post?.author, isMyVideo])
 
   // Sync liked state when post data changes
   useEffect(() => {
@@ -288,7 +302,15 @@ function VideoCard({ post, isActive, actions, currentUserId }) {
         {/* Bottom info (author + description) */}
         <div className="vf-info" onClick={(e) => e.stopPropagation()}>
           <div className="vf-author-row">
-            <div className="vf-avatar">{initials(displayName)}</div>
+            <UserAvatar
+              user={{
+                _id: String(post.author || ''),
+                firstName: isMyVideo ? currentUserProfile?.firstName : (post.authorFirstName || authorProfile?.firstName),
+                lastName: isMyVideo ? currentUserProfile?.lastName : (post.authorLastName || authorProfile?.lastName),
+                profilePhotoUrl: isMyVideo ? currentUserProfile?.profilePhotoUrl : authorProfile?.profilePhotoUrl,
+              }}
+              size={40}
+            />
             <div>
               <div className="vf-author-name">{displayName}</div>
               <div className="vf-time">{timeAgo(post.createdAt)}</div>
@@ -411,6 +433,7 @@ export default function VideoFeed() {
                 isActive={idx === activeIndex}
                 actions={actions}
                 currentUserId={auth?._id}
+                currentUserProfile={auth}
               />
             </div>
           ))}

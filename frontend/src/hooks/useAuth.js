@@ -14,6 +14,10 @@ export default function useAuth() {
             if (data && 'data' in data) {
                 setAuth(data.data);
                 navigate('/');
+                // Reload page after successful login
+                setTimeout(() => {
+                    window.location.reload();
+                }, 100);
             } else {
                 setError(data.error);
             }
@@ -27,6 +31,10 @@ export default function useAuth() {
             await User.logout();
             setAuth(null);
             navigate('/login');
+            // Reload page after successful logout
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
         } catch (err) {
             setError(err.message);
         }

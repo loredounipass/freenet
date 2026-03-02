@@ -14,6 +14,17 @@ export default function FeedItem({ post, actions = {} }) {
   const { auth } = useContext(AuthContext)
   const isMyPost = post && auth?._id && String(post.author) === String(auth._id)
 
+  // ── Author profile photo state ──
+  const [authorProfile, setAuthorProfile] = useState(null)
+  useEffect(() => {
+    if (isMyPost || !post?.author) return
+    let cancelled = false
+    profileService.getProfileById(String(post.author))
+      .then((res) => { if (!cancelled) setAuthorProfile((res?.data ?? res)) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [post?.author, isMyPost])
+
   // ── Follow state ──
   const [following, setFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
@@ -273,9 +284,9 @@ export default function FeedItem({ post, actions = {} }) {
             <UserAvatar
               user={{
                 _id: String(post.author || ''),
-                firstName: post.authorFirstName,
-                lastName: post.authorLastName,
-                profilePhotoUrl: isMyPost ? auth?.profilePhotoUrl : undefined,
+                firstName: post.authorFirstName || authorProfile?.firstName,
+                lastName: post.authorLastName || authorProfile?.lastName,
+                profilePhotoUrl: isMyPost ? auth?.profilePhotoUrl : authorProfile?.profilePhotoUrl,
               }}
               size={40}
             />

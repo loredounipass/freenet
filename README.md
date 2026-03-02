@@ -70,6 +70,16 @@ visit https://ffmpeg.org/download.html#build-windows
 
 download ffmpeg manually
 
+sudo apt update
+
+sudo apt install -y ffmpeg
+
+sudo apt install -y build-essential python3 make g++ libc6-dev
+
+sudo apt install -y libvips-dev
+
+pnpm install --ignore-scripts=false
+
 ```
 
 The backend listens by default on `http://localhost:4000` and exposes the API under `/secure/api`.

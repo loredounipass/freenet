@@ -3,6 +3,8 @@ import useDiscover, { isVideoPost } from '../../hooks/useDiscover'
 import { AuthContext } from '../../hooks/AuthContext'
 import { apiOrigin, mediaBase } from '../../api/http'
 import CommentsPanel from '../feed/CommentsPanel'
+import UserAvatar from '../common/UserAvatar'
+import * as profileService from '../../services/profile'
 
 /* ── helpers ── */
 function resolveUrl(u) {
@@ -76,7 +78,7 @@ const TABS = [
 ]
 
 /* ── DiscoverModal: full detail view ── */
-function DiscoverModal({ post, onClose, actions, currentUserId }) {
+function DiscoverModal({ post, onClose, actions, currentUserId, currentUserProfile }) {
   const mediaUrl = getMediaUrl(post)
   const isVideo  = isVideoPost(post)
   const videoRef = useRef(null)
@@ -89,6 +91,18 @@ function DiscoverModal({ post, onClose, actions, currentUserId }) {
   const [localLikes, setLocalLikes] = useState(post?.likesCount || 0)
   const [showComments, setShowComments] = useState(false)
   const [shareFeedback, setShareFeedback] = useState('')
+  const [authorProfile, setAuthorProfile] = useState(null)
+  
+  // Load author profile (only for other users' posts)
+  const isMyPost = post && currentUserId && String(post.author) === String(currentUserId)
+  useEffect(() => {
+    if (isMyPost || !post?.author) return
+    let cancelled = false
+    profileService.getProfileById(String(post.author))
+      .then((res) => { if (!cancelled) setAuthorProfile((res?.data ?? res)) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [post?.author, isMyPost])
 
   // sync liked when post changes
   useEffect(() => {
@@ -217,7 +231,15 @@ function DiscoverModal({ post, onClose, actions, currentUserId }) {
         <div className="disc-modal-info">
           {/* Author */}
           <div className="disc-modal-author-row">
-            <div className="disc-modal-avatar">{initials(displayName)}</div>
+            <UserAvatar
+              user={{
+                _id: String(post.author || ''),
+                firstName: isMyPost ? currentUserProfile?.firstName : (post.authorFirstName || authorProfile?.firstName),
+                lastName: isMyPost ? currentUserProfile?.lastName : (post.authorLastName || authorProfile?.lastName),
+                profilePhotoUrl: isMyPost ? currentUserProfile?.profilePhotoUrl : authorProfile?.profilePhotoUrl,
+              }}
+              size={40}
+            />
             <div>
               <div className="disc-modal-author-name">{displayName}</div>
               <div className="disc-modal-time">{timeAgo(post.createdAt)}</div>
@@ -522,6 +544,7 @@ export default function Discover() {
           onClose={() => setSelected(null)}
           actions={actions}
           currentUserId={auth?._id}
+          currentUserProfile={auth}
         />
       )}
     </div>
