@@ -58,7 +58,7 @@ function Settings() {
                         
                         <li className="sidebar-bottom-item">
                             <Link
-                                to="/"
+                                to="/feed"
                                 className="sidebar-btn"
                             >
                                 <span className="sidebar-icon"><ArrowBackIcon /></span>

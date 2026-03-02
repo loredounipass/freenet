@@ -2,15 +2,14 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { AuthContext } from '../hooks/AuthContext';
-import { apiOrigin } from '../api/http';
-import * as profileService from '../services/profile';
 import { useTranslation } from 'react-i18next';
 import HomeIcon from '@mui/icons-material/Home';
 import LiveTvIcon from '@mui/icons-material/LiveTv';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import ExploreIcon from '@mui/icons-material/Explore';
-import SearchModal from './SearchModal'
+import SearchModal from './SearchModal';
+import UserAvatar from './common/UserAvatar';
 
 function Navbar() {
   const { t } = useTranslation();
@@ -19,7 +18,6 @@ function Navbar() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [profilePhoto, setProfilePhoto] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef(null);
@@ -32,28 +30,11 @@ function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadProfile() {
-      try {
-        const res = await profileService.getMyProfile();
-        const data = res?.data ?? res;
-        if (mounted && data?.profilePhotoUrl) setProfilePhoto(data.profilePhotoUrl);
-      } catch (_) { /* ignore */ }
-    }
-    if (auth) loadProfile();
-    return () => { mounted = false };
-  }, [auth]);
-
   const handleMenuAction = async (key) => {
     setMenuOpen(false);
     setMobileOpen(false);
     if (key === 'logout') {
-      try {
-        await logoutUser();
-      } catch (err) {
-        // ignore
-      }
+      try { await logoutUser(); } catch (_) {}
       setAuth(null);
       navigate('/login');
     } else if (key === 'settings') {
@@ -62,16 +43,6 @@ function Navbar() {
       navigate('/profile');
     }
   };
-
-  const getAvatarColor = (name = 'A') => {
-    const colors = ['#F6851B', '#3C3C3B', '#E8E8E8'];
-    return colors[name.charCodeAt(0) % colors.length];
-  };
-
-  function resolveImageUrl(url) {
-    if (!url) return null;
-    return url.startsWith('/') ? `${apiOrigin}${url}` : url;
-  }
 
   if (!auth) return null;
 
@@ -128,29 +99,12 @@ function Navbar() {
           </button>
 
           <div className="avatar-wrap" ref={menuRef} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <button
-              type="button"
+            <UserAvatar
+              user={auth}
+              size={40}
               onClick={() => setMenuOpen((s) => !s)}
-              className="avatar-btn"
-              aria-label="Menú de usuario"
-              style={{
-                backgroundColor: getAvatarColor(auth.firstName),
-                textDecoration: 'none',
-                color: 'inherit',
-                border: 'none',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              {profilePhoto || auth.profilePhotoUrl ? (
-                <img src={resolveImageUrl(profilePhoto || auth.profilePhotoUrl)} alt="avatar" className="navbar-logo rounded-full object-cover w-10 h-10" />
-              ) : (
-                <span style={{ width: 40, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{auth.firstName ? auth.firstName.charAt(0) : '?'}</span>
-              )}
-            </button>
+              title="Menú de usuario"
+            />
 
             {menuOpen && (
               <div className="avatar-menu">

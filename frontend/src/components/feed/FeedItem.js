@@ -1,25 +1,50 @@
-import React, { useState, useEffect, useRef, useContext } from 'react'
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { mediaBase, apiOrigin } from '../../api/http'
 import CommentsPanel from './CommentsPanel'
 import NewChatDialog from '../chat/NewChatDialog'
 import MessagesService from '../../services/messagesAndMultimedia'
 import { AuthContext } from '../../hooks/AuthContext'
+import * as profileService from '../../services/profile'
+import UserAvatar from '../common/UserAvatar'
 
-/* ── helpers ── */
-function initials(name) {
-  if (!name) return '?'
-  const p = name.trim().split(' ')
-  return p.length >= 2
-    ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
-    : name[0].toUpperCase()
-}
 
-export default function FeedItem({ post, actions = {}, currentUserPhotoUrl = null }) {
+export default function FeedItem({ post, actions = {} }) {
   const { likePost, unlikePost, addComment, joinPost, viewPost, getComments, likeComment, unlikeComment, sharePost } = actions
   const { auth } = useContext(AuthContext)
   const isMyPost = post && auth?._id && String(post.author) === String(auth._id)
-  const authorPhotoUrl = isMyPost ? currentUserPhotoUrl : null
+
+  // ── Follow state ──
+  const [following, setFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+  useEffect(() => {
+    if (isMyPost || !post?.author) return
+    let cancelled = false
+    profileService.getFollowStatus(String(post.author))
+      .then((res) => { if (!cancelled) setFollowing((res?.data ?? res)?.following ?? false) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [post?.author, isMyPost])
+
+  const handleFollow = useCallback(async () => {
+    if (followLoading) return
+    setFollowLoading(true)
+    try {
+      await profileService.followUser(String(post.author))
+      setFollowing(true)
+    } catch (_) {}
+    finally { setFollowLoading(false) }
+  }, [post?.author, followLoading])
+
+  const handleUnfollow = useCallback(async () => {
+    if (followLoading) return
+    setFollowLoading(true)
+    try {
+      await profileService.unfollowUser(String(post.author))
+      setFollowing(false)
+    } catch (_) {}
+    finally { setFollowLoading(false) }
+  }, [post?.author, followLoading])
 
   // Derive initial liked state from post.likes array (contains user IDs)
   const isLikedByMe = (p) => {
@@ -242,20 +267,48 @@ export default function FeedItem({ post, actions = {}, currentUserPhotoUrl = nul
         }}>
           <Link
             to={post.author ? `/profile/${post.author}` : '/profile'}
-            className="fb-avatar"
-            style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'inherit', flexShrink: 0 }}
+            style={{ textDecoration: 'none', flexShrink: 0 }}
             aria-label={isMyPost ? 'Ir a mi perfil' : `Ver perfil de ${displayName}`}
           >
-            {authorPhotoUrl ? (
-              <img src={authorPhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              initials(displayName)
-            )}
+            <UserAvatar
+              user={{
+                _id: String(post.author || ''),
+                firstName: post.authorFirstName,
+                lastName: post.authorLastName,
+                profilePhotoUrl: isMyPost ? auth?.profilePhotoUrl : undefined,
+              }}
+              size={40}
+            />
           </Link>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Link to={post.author ? `/profile/${post.author}` : '/profile'} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="fb-author">{displayName}</div>
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <Link to={post.author ? `/profile/${post.author}` : '/profile'} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="fb-author">{displayName}</div>
+              </Link>
+              {/* Follow button — only for other people's posts */}
+              {!isMyPost && (
+                <button
+                  onClick={following ? handleUnfollow : handleFollow}
+                  disabled={followLoading}
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '2px 10px',
+                    borderRadius: 20,
+                    border: following ? '1.5px solid var(--fn-border)' : '1.5px solid var(--fn-teal)',
+                    background: following ? 'transparent' : 'var(--fn-teal)',
+                    color: following ? 'var(--fn-muted)' : '#04111a',
+                    cursor: followLoading ? 'wait' : 'pointer',
+                    transition: 'all 0.18s',
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1.6,
+                  }}
+                  aria-label={following ? 'Dejar de seguir' : 'Seguir'}
+                >
+                  {following ? 'Siguiendo' : '+ Seguir'}
+                </button>
+              )}
+            </div>
             <div className="fb-time">{timeStr}</div>
           </div>
         </div>

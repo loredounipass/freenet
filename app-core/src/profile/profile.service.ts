@@ -29,18 +29,24 @@ export class ProfileService {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
     const doc: any = await this.profileModel.findOne({ owner: new Types.ObjectId(userId) }).lean().exec();
 
+    // Fetch user record to use as name/avatar fallback (in case profile doc has no firstName)
+    let userFallback: any = null;
+    try {
+      userFallback = await this.userService.getUserById(userId);
+    } catch (_) {}
+
     if (doc) {
       const publicView = {
         owner: doc.owner?.toString(),
-        firstName: doc.firstName,
-        lastName: doc.lastName,
+        firstName: doc.firstName || userFallback?.firstName || undefined,
+        lastName: doc.lastName || userFallback?.lastName || undefined,
         links: doc.links || [],
         gender: doc.gender,
         relationshipStatus: doc.relationshipStatus,
         interests: doc.interests || [],
         bio: doc.bio,
         likes: doc.likes || 0,
-        profilePhotoUrl: doc.profilePhotoUrl,
+        profilePhotoUrl: doc.profilePhotoUrl || userFallback?.profilePhotoUrl || undefined,
         coverPhotoUrl: doc.coverPhotoUrl,
         followersCount: Array.isArray(doc.followers) ? doc.followers.length : 0,
         followingCount: Array.isArray(doc.following) ? doc.following.length : 0,
@@ -49,30 +55,27 @@ export class ProfileService {
       return publicView;
     }
 
-    // If no profile document exists, try to return a minimal public view from the User
-    try {
-      const user = await this.userService.getUserById(userId);
-      if (!user) throw new NotFoundException('Profile not found');
-      const publicView = {
-        owner: user._id?.toString(),
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
+    // If no profile document exists, build a minimal public view from the User
+    if (userFallback) {
+      return {
+        owner: userFallback._id?.toString(),
+        firstName: userFallback.firstName || undefined,
+        lastName: userFallback.lastName || undefined,
         links: [],
         gender: undefined,
         relationshipStatus: undefined,
         interests: [],
         bio: undefined,
         likes: 0,
-        profilePhotoUrl: (user as any).profilePhotoUrl || undefined,
+        profilePhotoUrl: userFallback.profilePhotoUrl || undefined,
         coverPhotoUrl: undefined,
         followersCount: 0,
         followingCount: 0,
-        createdAt: (user as any).createdAt,
+        createdAt: userFallback.createdAt,
       };
-      return publicView;
-    } catch (err) {
-      throw new NotFoundException('Profile not found');
     }
+
+    throw new NotFoundException('Profile not found');
   }
 
   // Public: get photos/videos posted by a given user (for profile media tab)

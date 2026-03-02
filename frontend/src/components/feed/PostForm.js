@@ -1,22 +1,14 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
-import useProfile from '../../hooks/useProfile'
 import { AuthContext } from '../../hooks/AuthContext'
-import { apiOrigin } from '../../api/http'
 import Toast from '../toasts/Toast'
-
-function resolveProfilePhotoUrl(url) {
-  if (!url) return null
-  return url.startsWith('/') ? `${apiOrigin}${url}` : url
-}
+import UserAvatar from '../common/UserAvatar'
 
 export default function PostForm() {
   const navigate = useNavigate()
   const { createPostWithFile, createPost, loading } = useFeedAndMultimedia()
   const { auth } = useContext(AuthContext)
-  const { profile } = useProfile()
-  const profilePhotoUrl = resolveProfilePhotoUrl(profile?.profilePhotoUrl)
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -116,25 +108,13 @@ export default function PostForm() {
     <form onSubmit={onSubmit} className="fb-post-form">
       {/* Top: avatar + textarea */}
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-        {/* Avatar: clic para ir a mi perfil */}
-        <button
-          type="button"
+        {/* Avatar: click to go to own profile */}
+        <UserAvatar
+          user={auth}
+          size={40}
           onClick={() => navigate('/profile')}
-          aria-label="Ir a mi perfil"
-          style={{
-            width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-            background: profilePhotoUrl ? 'transparent' : 'linear-gradient(135deg,#22c1c3,#1e90ff)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: '1rem', color: '#04111a',
-            overflow: 'hidden', border: 'none', cursor: 'pointer', padding: 0,
-          }}
-        >
-          {profilePhotoUrl ? (
-            <img src={profilePhotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            displayName ? displayName[0].toUpperCase() : '?'
-          )}
-        </button>
+          title="Ir a mi perfil"
+        />
         <textarea
           className="fb-post-textarea"
           placeholder={`¿Qué estás pensando, ${displayName.split(' ')[0]}?`}
