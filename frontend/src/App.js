@@ -21,6 +21,7 @@ import ResetPassword from './pages/ResetPassword'
 import ConversationList from './components/chat/ConversationList'
 import ChatView from './components/chat/ChatView'
 import FeedList from './components/feed/FeedList'
+import PostPage from './components/feed/PostPage'
 import VideoFeed from './components/videos/VideoFeed'
 import Discover from './components/discover/Discover'
 import UserProfile from './components/profile/userProfile'
@@ -54,7 +55,6 @@ export default function App() {
 function MainBox() {
     const location = useLocation()
     const isVideoPage = location.pathname === '/videos'
-    const isDiscoverPage = location.pathname === '/discover'
 
     return (
         <Box
@@ -63,7 +63,7 @@ function MainBox() {
                 backgroundColor: 'transparent',
                 flexGrow: 1,
                 height: '100vh',
-                overflow: (isVideoPage || isDiscoverPage) ? 'hidden' : 'auto',
+                overflow: isVideoPage ? 'hidden' : 'auto',
             }}
         >
             <Toolbar />
@@ -90,6 +90,7 @@ function MainContent() {
                 <Route path="/" element={<PrivateRoute><WithContainer><Home /></WithContainer></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><WithContainer><Settings /></WithContainer></PrivateRoute>} />
                 <Route path="/feed" element={<PrivateRoute><WithContainer><FeedList /></WithContainer></PrivateRoute>} />
+                <Route path="/feed/:id" element={<PrivateRoute><WithContainer><PostPage /></WithContainer></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
                 <Route path="/profile/:userId" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
                 <Route path="/verifyemail" element={<PrivateRoute><WithContainer><EmailVerificationComponent /></WithContainer></PrivateRoute>} />

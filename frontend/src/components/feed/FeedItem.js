@@ -444,13 +444,15 @@ export default function FeedItem({ post, actions = {} }) {
             </svg>
             {localShares || 0} compartido{(localShares || 0) !== 1 ? 's' : ''}
           </span>
-          <span style={{ marginLeft: 'auto' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            {typeof views === 'number' ? views : 0} vista{views !== 1 ? 's' : ''}
-          </span>
+          {isVideo && (
+            <span style={{ marginLeft: 'auto' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              {typeof views === 'number' ? views : 0} vista{views !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
 
         {/* ── Action buttons ── */}

@@ -10,14 +10,13 @@ export default function SearchModal({ open, onClose, initialQuery }) {
   const [results, setResults] = useState([])
   const navigate = useNavigate()
   const { auth } = useContext(AuthContext)
-  
-  // When the modal opens with an `initialQuery` (from navbar input), prefill the input.
+
   useEffect(() => {
     if (!open) return
     if (initialQuery && initialQuery !== query) {
       setQuery(initialQuery)
     }
-  }, [open, initialQuery, query]);
+  }, [open, initialQuery, query])
 
   function resolveProfilePhotoUrl(url) {
     if (!url) return null
@@ -33,7 +32,6 @@ export default function SearchModal({ open, onClose, initialQuery }) {
 
   useEffect(() => {
     if (!open) return
-    // focus input when opened
     try { const el = ref.current && ref.current.querySelector('input'); if (el) el.focus() } catch (_) {}
   }, [open])
 
@@ -47,7 +45,6 @@ export default function SearchModal({ open, onClose, initialQuery }) {
         const res = await User.searchUsers(query)
         const data = res?.data ?? res
         if (!mounted) return
-        // Expect an array of user docs
         setResults(Array.isArray(data) ? data : (data?.data || []))
       } catch (err) {
         if (!mounted) return
@@ -63,54 +60,115 @@ export default function SearchModal({ open, onClose, initialQuery }) {
   return (
     <div className="search-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="search-modal-panel" ref={ref} role="dialog" aria-modal="true">
+
+        {/* ── Header: search bar ── */}
         <div className="search-modal-header">
+          <span className="search-modal-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+          </span>
           <input
-            placeholder="Buscar"
+            placeholder="Buscar personas…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Buscar"
           />
+          {query && (
+            <button className="search-modal-clear" onClick={() => setQuery('')} aria-label="Limpiar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          )}
           <button className="search-modal-close" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
 
+        {/* ── Body ── */}
         <div className="search-modal-body">
+
+          {/* Empty state */}
           {query.trim().length === 0 && (
-            <div className="search-modal-empty">Escribe para buscar usuarios</div>
+            <div className="search-modal-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <p>Busca por nombre o usuario</p>
+            </div>
           )}
 
+          {/* Results */}
           {results.length > 0 && (
-            <ul className="search-results">
-              {results.map((r) => {
-                const id = r._id || r.id || r.userId
-                const name = [r.firstName, r.lastName].filter(Boolean).join(' ') || r.username || r.name || 'Usuario'
-                const thumb = resolveProfilePhotoUrl(r.profilePhotoUrl)
-                return (
-                  <li
-                    key={id}
-                    className="search-result-item"
-                    onClick={() => {
-                      onClose();
-                      if (!id) return;
-                      // If the result is the current authenticated user, navigate to own profile route
-                      const myId = auth?._id || auth?.id || auth?._userId || auth?._id?.toString();
-                      if (myId && id && id.toString() === myId.toString()) {
-                        navigate('/profile');
-                      } else {
-                        navigate(`/profile/${id}`);
-                      }
-                    }}
-                    style={{ cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center' }}
-                  >
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: '#222', flexShrink:0, display:'inline-block' }}>
-                      {thumb ? <img src={thumb} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <div style={{ width: '100%', height: '100%' }} />}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                      <div className="search-result-title" aria-label={`Usuario ${name}`} style={{ marginLeft: 6 }}>{name}</div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
+            <>
+              <div className="search-results-label">Personas</div>
+              <ul className="search-results">
+                {results.map((r) => {
+                  const id        = r._id || r.id || r.userId
+                  const firstName = r.firstName || ''
+                  const lastName  = r.lastName  || ''
+                  const fullName  = [firstName, lastName].filter(Boolean).join(' ') || r.username || r.name || 'Usuario'
+                  const handle    = r.username ? `@${r.username}` : null
+                  const photoUrl  = resolveProfilePhotoUrl(r.profilePhotoUrl)
+
+                  // Deterministic accent color for initial fallback
+                  const palette = ['#22c1c3','#F6851B','#7c3aed','#0ea5e9','#10b981','#f43f5e','#f59e0b','#3b82f6','#8b5cf6','#ec4899']
+                  let hash = 0
+                  const seed = String(id || firstName || '')
+                  for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash)
+                  const bgColor = palette[Math.abs(hash) % palette.length]
+                  const initial = (firstName || fullName || '?')[0]?.toUpperCase() ?? '?'
+
+                  return (
+                    <li
+                      key={id}
+                      className="search-result-item"
+                      onClick={() => {
+                        onClose()
+                        if (!id) return
+                        const myId = auth?._id || auth?.id
+                        if (myId && id && id.toString() === myId.toString()) {
+                          navigate('/profile')
+                        } else {
+                          navigate(`/profile/${id}`)
+                        }
+                      }}
+                    >
+                      {/* ── Avatar: real photo OR colored initial ── */}
+                      <div
+                        className="search-result-avatar"
+                        style={{ background: photoUrl ? 'transparent' : bgColor }}
+                      >
+                        {photoUrl
+                          ? <img src={photoUrl} alt={fullName} />
+                          : <span>{initial}</span>
+                        }
+                      </div>
+
+                      {/* ── Name + handle ── */}
+                      <div className="search-result-info">
+                        <span className="search-result-name">{fullName}</span>
+                        {handle && <span className="search-result-handle">{handle}</span>}
+                      </div>
+
+                      {/* ── Chevron ── */}
+                      <svg className="search-result-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
+
+          {/* No results for query */}
+          {query.trim().length > 0 && results.length === 0 && (
+            <div className="search-modal-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <p>Sin resultados para "<strong style={{ color: 'var(--fn-text)' }}>{query}</strong>"</p>
+            </div>
           )}
         </div>
       </div>

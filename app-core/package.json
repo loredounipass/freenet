@@ -106,8 +106,8 @@
       "msgpackr-extract"
     ],
     "onlyBuiltDependencies": [
-      "ffmpeg-static",
-      "sharp"
+      "sharp",
+      "ffmpeg-static"
     ]
   },
   "jest": {

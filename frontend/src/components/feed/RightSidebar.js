@@ -116,9 +116,9 @@ export default function RightSidebar() {
   }
 
   const sponsored = [
-    { id: 's1', title: 'Promoción local', image: '/assets/sponsored1.jpg', url: '#' },
-    { id: 's2', title: 'Ofertas cerca de ti', image: '/assets/sponsored2.jpg', url: '#' },
-    { id: 's3', title: 'Promoción local', image: '/assets/sponsored3.jpg', url: '#' },
+    { id: 's1', title: 'Promoción local',    image: '/assets/sponsored1.jpg', url: 'https://tuempresa.com', link: 'tuempresa.com' },
+    { id: 's2', title: 'Ofertas cerca de ti', image: '/assets/sponsored2.jpg', url: 'https://ofertas.com',   link: 'ofertas.com' },
+    { id: 's3', title: 'Promoción local',    image: '/assets/sponsored3.jpg', url: 'https://tutienda.com', link: 'tutienda.com' },
   ]
 
   // distances removed per request
@@ -127,14 +127,33 @@ export default function RightSidebar() {
     <div className="fb-right-sidebar-inner">
       {/* Sponsored rendered without boxed section per request */}
       <div className="fb-sponsored-plain">
-        <div className="fb-sidebar-header">Sponsored</div>
+        <div className="fb-market-header">
+          <span className="fb-market-badge">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </span>
+          <span className="fb-market-title">Freeus Advertising</span>
+        </div>
         <div className="fb-sponsored-list">
           {sponsored.map(s => (
-            <a key={s.id} className="fb-sponsored-item" href={s.url} onClick={(e) => e.preventDefault()}>
+            <a
+              key={s.id}
+              className="fb-sponsored-item"
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <div className="fb-sponsored-thumb" style={{backgroundImage: `url(${s.image})`}} />
               <div className="fb-sponsored-body">
                 <div className="fb-sponsored-title">{s.title}</div>
-                <div className="fb-sponsored-sub">Sponsored · Ad</div>
+                <div className="fb-sponsored-sub">Promotional Ad</div>
+                <div className="fb-sponsored-link">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  {s.link}
+                </div>
               </div>
             </a>
           ))}

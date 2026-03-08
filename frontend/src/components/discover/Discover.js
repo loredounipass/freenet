@@ -25,13 +25,6 @@ function getMediaUrl(post) {
   )
 }
 
-function initials(name) {
-  if (!name) return '?'
-  const p = name.trim().split(' ')
-  return p.length >= 2
-    ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
-    : name[0].toUpperCase()
-}
 
 function formatCount(n) {
   if (!n || n === 0) return '0'

@@ -48,7 +48,7 @@ export default function LeftSidebar() {
         style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit', textAlign: 'left' }}
         aria-label="Ir a mi perfil"
       >
-        <UserAvatar user={auth} size={56} />
+        <UserAvatar user={auth} size={40} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="fb-left-name" style={{ fontWeight: 700, color: 'var(--fn-text)', fontSize: 14 }}>{name}</div>
         </div>

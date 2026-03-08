@@ -4,6 +4,7 @@ import FeedItem from './FeedItem'
 import PostForm from './PostForm'
 import RightSidebar from './RightSidebar'
 import LeftSidebar from './LeftSidebar'
+import Historias from './Historias'
 
 
 export default function FeedList() {
@@ -17,6 +18,7 @@ export default function FeedList() {
 
       <div className="fb-list-wrapper">
         <PostForm />
+        <Historias />
 
         {loading && (
           <div className="fb-loading">Cargando publicaciones</div>

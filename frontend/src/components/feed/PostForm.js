@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react'
+import React, { useState, useContext, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useFeedAndMultimedia from '../../hooks/useFeedAndMultimedia'
 import { AuthContext } from '../../hooks/AuthContext'
@@ -6,209 +6,188 @@ import Toast from '../toasts/Toast'
 import UserAvatar from '../common/UserAvatar'
 
 export default function PostForm() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
   const { createPostWithFile, createPost, loading } = useFeedAndMultimedia()
-  const { auth } = useContext(AuthContext)
+  const { auth }  = useContext(AuthContext)
   const [description, setDescription] = useState('')
-  const [file, setFile] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [toast, setToast] = useState('')
-  // ensure object URL is revoked on unmount
+  const [file, setFile]               = useState(null)
+  const [previewUrl, setPreviewUrl]   = useState(null)
+  const [toast, setToast]             = useState('')
+  const [expanded, setExpanded]       = useState(false)
+  const textareaRef = useRef(null)
   useCleanupPreview(previewUrl)
 
+  /* ── submit ── */
   const onSubmit = async (e) => {
     e.preventDefault()
     try {
       if (file) {
-        await createPostWithFile({ file, description, type: file.type && file.type.startsWith('video') ? 'video' : 'image' })
+        await createPostWithFile({ file, description, type: file.type?.startsWith('video') ? 'video' : 'image' })
       } else {
         await createPost({ description, type: 'text', authorId: auth?._id })
       }
       setDescription('')
       setFile(null)
-      // revoke preview URL after successful publish
-      if (previewUrl) {
-        try { URL.revokeObjectURL(previewUrl) } catch (_) {}
-        setPreviewUrl(null)
-      }
-      e.target.reset()
+      setExpanded(false)
+      if (previewUrl) { try { URL.revokeObjectURL(previewUrl) } catch (_) {}; setPreviewUrl(null) }
+      if (e.target?.reset) e.target.reset()
     } catch (err) {
       console.error(err)
       setToast('Error creando el post')
     }
   }
 
-  // handle file input with video duration validation (max 5 minutes)
+  /* ── file handler ── */
   const handleFileChange = (e) => {
     const f = e.target.files[0]
-    // clear any previous toast
     if (toast) setToast('')
+    if (previewUrl) { try { URL.revokeObjectURL(previewUrl) } catch (_) {} }
+    if (!f) { setFile(null); setPreviewUrl(null); return }
 
-    // revoke previous preview
-    if (previewUrl) { try { URL.revokeObjectURL(previewUrl) } catch(_) {} }
-
-    if (!f) {
-      setFile(null)
-      setPreviewUrl(null)
-      return
-    }
-
-    if (f.type && f.type.startsWith('video')) {
-      // create a temporary URL to read metadata
+    if (f.type?.startsWith('video')) {
       const metaUrl = URL.createObjectURL(f)
       const vid = document.createElement('video')
       vid.preload = 'metadata'
       vid.src = metaUrl
       vid.onloadedmetadata = () => {
-        try { URL.revokeObjectURL(metaUrl) } catch(_) {}
-        const duration = vid.duration || 0
-        const maxSeconds = 5 * 60 // 5 minutes
-        if (duration > maxSeconds) {
+        try { URL.revokeObjectURL(metaUrl) } catch (_) {}
+        if ((vid.duration || 0) > 300) {
           setToast('Los videos no pueden superar 5 minutos.')
-          setFile(null)
-          setPreviewUrl(null)
-          e.target.value = ''
+          setFile(null); setPreviewUrl(null); e.target.value = ''
         } else {
-          // accepted: set file and preview
           setFile(f)
-          try { const url = URL.createObjectURL(f); setPreviewUrl(url) } catch(_) { setPreviewUrl(null) }
+          try { setPreviewUrl(URL.createObjectURL(f)) } catch (_) { setPreviewUrl(null) }
         }
       }
       vid.onerror = () => {
-        try { URL.revokeObjectURL(metaUrl) } catch(_) {}
+        try { URL.revokeObjectURL(metaUrl) } catch (_) {}
         setToast('No se pudo leer el archivo de video.')
-        setFile(null)
-        setPreviewUrl(null)
-        e.target.value = ''
+        setFile(null); setPreviewUrl(null); e.target.value = ''
       }
     } else {
-      // image or other file types
       setFile(f)
-      try { const url = URL.createObjectURL(f); setPreviewUrl(url) } catch(_) { setPreviewUrl(null) }
+      try { setPreviewUrl(URL.createObjectURL(f)) } catch (_) { setPreviewUrl(null) }
     }
+    setExpanded(true)
   }
 
   const handleDiscard = (e) => {
     e.preventDefault()
     setDescription('')
     setFile(null)
-    if (previewUrl) {
-      try { URL.revokeObjectURL(previewUrl) } catch (_) {}
-      setPreviewUrl(null)
-    }
+    setExpanded(false)
+    if (previewUrl) { try { URL.revokeObjectURL(previewUrl) } catch (_) {}; setPreviewUrl(null) }
     const input = document.getElementById('post-file-input')
     if (input) input.value = ''
   }
 
-  const displayName = auth
-    ? `${auth.firstName || ''} ${auth.lastName || ''}`.trim() || auth.username || 'Tú'
-    : 'Tú'
+  const displayName   = auth ? `${auth.firstName || ''}`.trim() || auth.username || 'Tú' : 'Tú'
+  const firstName     = displayName.split(' ')[0]
+  const hasContent    = file || description.trim().length > 0
 
   return (
     <form onSubmit={onSubmit} className="fb-post-form">
-      {/* Top: avatar + textarea */}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-        {/* Avatar: click to go to own profile */}
+
+      {/* ── Single bar row ── */}
+      <div className="fb-post-bar">
+        {/* Avatar */}
         <UserAvatar
           user={auth}
-          size={40}
+          size={36}
           onClick={() => navigate('/profile')}
           title="Ir a mi perfil"
         />
-        <textarea
-          className="fb-post-textarea"
-          placeholder={`¿Qué estás pensando, ${displayName.split(' ')[0]}?`}
+
+        {/* Text input — expands on focus */}
+        <input
+          ref={textareaRef}
+          className="fb-post-input"
+          placeholder={`¿Qué estás pensando, ${firstName}?`}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          rows={3}
+          onFocus={() => setExpanded(true)}
         />
-      </div>
 
-      {/* Bottom: file picker + button */}
-      <div className="fb-post-footer" style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 100%', minWidth: 0 }}>
+        {/* Right-side actions */}
+        <div className="fb-post-actions">
+          {/* Photo icon */}
+          <label
+            className="fb-post-icon-btn"
+            htmlFor="post-file-input"
+            title="Foto / Video"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </label>
+
+          {/* Video icon */}
+          <label
+            className="fb-post-icon-btn"
+            htmlFor="post-file-input"
+            title="Video"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7"/>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+            </svg>
+          </label>
+
+          {/* Hidden file input */}
           <input
             id="post-file-input"
             className="fb-file-input"
             type="file"
             accept="image/*,video/*"
-            onChange={(e) => handleFileChange(e)}
+            onChange={handleFileChange}
           />
-          {file && (
-            <span className="fb-file-name" title={file.name}>
-              {file.name}
-            </span>
-          )}
-        </div>
 
-        {/* Preview area for selected file */}
-        {previewUrl && (
-          <div className="fb-media">
-            {file && file.type && file.type.startsWith('video') ? (
-              <video
-                controls
-                style={{ width: '100%', maxHeight: '480px', display: 'block', objectFit: 'contain' }}
-                src={previewUrl}
-              >
-                Tu navegador no soporta la etiqueta de video.
-              </video>
-            ) : (
-              <img
-                src={previewUrl}
-                alt={file ? file.name : 'preview'}
-                style={{ width: '100%', maxHeight: '480px', display: 'block', objectFit: 'contain' }}
-              />
-            )}
-          </div>
-        )}
-        <div style={{ flex: '1 1 100%', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem', alignItems: 'center', gap: '0.5rem' }}>
-          <label className="fb-file-label" htmlFor="post-file-input" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.3rem', borderRadius: 6 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <span>Foto</span>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.3rem', borderRadius: 6 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M5 3v18l15-9z" />
-              </svg>
-              <span>Video</span>
-            </span>
-          </label>
+          {/* Publish button */}
           <button
             className="fb-btn-primary"
             type="submit"
-            disabled={loading || (!file && description.trim().length === 0)}
+            disabled={loading || !hasContent}
           >
-            {loading ? 'Publicando…' : 'Publicar'}
+            {loading ? '…' : 'Publicar'}
           </button>
-          {(file || description.trim().length > 0) && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleDiscard}
-              disabled={loading}
-            >
-              Descartar
-            </button>
-          )}
         </div>
       </div>
+
+      {/* ── Expanded area: preview + discard ── */}
+      {(expanded && (previewUrl || file)) && (
+        <div className="fb-post-expanded">
+          {/* File name */}
+          {file && (
+            <span className="fb-file-name" title={file.name}>{file.name}</span>
+          )}
+
+          {/* Media preview */}
+          {previewUrl && (
+            <div className="fb-media">
+              {file?.type?.startsWith('video') ? (
+                <video controls src={previewUrl} style={{ width: '100%', maxHeight: '360px', objectFit: 'contain', display: 'block', borderRadius: 10 }} />
+              ) : (
+                <img src={previewUrl} alt={file?.name || 'preview'} style={{ width: '100%', maxHeight: '360px', objectFit: 'contain', display: 'block', borderRadius: 10 }} />
+              )}
+            </div>
+          )}
+
+          {/* Discard */}
+          <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={loading}>
+            Descartar
+          </button>
+        </div>
+      )}
+
       <Toast message={toast} onDismiss={() => setToast('')} />
     </form>
   )
 }
 
-// cleanup preview URL on unmount
 function useCleanupPreview(url) {
   useEffect(() => {
-    return () => {
-      if (url) {
-        try { URL.revokeObjectURL(url) } catch (_) {}
-      }
-    }
+    return () => { if (url) { try { URL.revokeObjectURL(url) } catch (_) {} } }
   }, [url])
 }
