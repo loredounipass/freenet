@@ -2033,6 +2033,15 @@ a {
   padding: 1.5rem 1rem 3rem;
 }
 
+/* Mobile: edge-to-edge feed like Facebook/Meta */
+@media (max-width: 768px) {
+  .fb-list-wrapper {
+    max-width: 100%;
+    padding: 0 0 2rem;
+    margin-top: 0;
+  }
+}
+
 /* Page layout when feed has a right sidebar */
 .fb-page-layout {
   display: flex;
@@ -3305,6 +3314,22 @@ a {
   box-shadow: 0 14px 40px rgba(30, 144, 255, 0.10);
 }
 
+/* ── Mobile: edge-to-edge cards like Facebook/Meta ── */
+@media (max-width: 768px) {
+  .fb-card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    margin-bottom: 8px;
+  }
+
+  .fb-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
 /* ---- Post author name ---- */
 .fb-author {
   font-weight: 700;
@@ -3378,7 +3403,8 @@ a {
 }
 
 .btn-like,
-.btn-comment {
+.btn-comment,
+.btn-share {
   flex: 1;
   display: inline-flex;
   align-items: center;
@@ -3407,34 +3433,29 @@ a {
   border-color: rgba(34, 193, 195, 0.35);
 }
 
+/* ── Comment button ── */
 .btn-comment:hover {
   background: rgba(30, 144, 255, 0.08);
   color: var(--fn-blue);
   border-color: rgba(30, 144, 255, 0.2);
 }
 
-/* ---- Share button ---- */
-.btn-share {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0.52rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid var(--fn-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--fn-muted);
-  font-weight: 600;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: all 160ms ease;
+/* ── Share button ── */
+.btn-share:hover {
+  background: rgba(100, 220, 140, 0.10);
+  color: #64dc8c;
+  border-color: rgba(100, 220, 140, 0.28);
 }
 
-.btn-share:hover {
-  background: rgba(34, 193, 195, 0.06);
-  color: var(--fn-teal);
-  border-color: rgba(34, 193, 195, 0.18);
+.btn-share.shared {
+  background: rgba(100, 220, 140, 0.15);
+  color: #64dc8c;
+  border-color: rgba(100, 220, 140, 0.35);
+}
+
+.btn-share:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* ---- Comment section ---- */
@@ -3510,6 +3531,19 @@ a {
   padding: 0.75rem 1rem;
   margin-bottom: 1.25rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Mobile: edge-to-edge, with breathing room from navbar */
+@media (max-width: 768px) {
+  .fb-post-form {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    margin-top: 0.75rem;
+    margin-bottom: 8px;
+    padding: 0.75rem 1rem;
+  }
 }
 
 /* ── Post bar: single compact row ── */

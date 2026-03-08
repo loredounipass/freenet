@@ -89,8 +89,8 @@ function MainContent() {
                 {/* All other routes inside a centred Container */}
                 <Route path="/" element={<PrivateRoute><WithContainer><Home /></WithContainer></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><WithContainer><Settings /></WithContainer></PrivateRoute>} />
-                <Route path="/feed" element={<PrivateRoute><WithContainer><FeedList /></WithContainer></PrivateRoute>} />
-                <Route path="/feed/:id" element={<PrivateRoute><WithContainer><PostPage /></WithContainer></PrivateRoute>} />
+                <Route path="/feed" element={<PrivateRoute><WithFeedContainer><FeedList /></WithFeedContainer></PrivateRoute>} />
+                <Route path="/feed/:id" element={<PrivateRoute><WithFeedContainer><PostPage /></WithFeedContainer></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
                 <Route path="/profile/:userId" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
                 <Route path="/verifyemail" element={<PrivateRoute><WithContainer><EmailVerificationComponent /></WithContainer></PrivateRoute>} />
@@ -115,6 +115,23 @@ function WithContainer({ children }) {
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4, position: 'relative' }}>
             {children}
         </Container>
+    )
+}
+
+// Feed-specific container: edge-to-edge on mobile, centered on desktop
+function WithFeedContainer({ children }) {
+    return (
+        <Box
+            sx={{
+                width: '100%',
+                mt: { xs: 0, sm: 1 },
+                mb: { xs: 0, sm: 2 },
+                px: { xs: 0, sm: 0 },
+                position: 'relative',
+            }}
+        >
+            {children}
+        </Box>
     )
 }
 

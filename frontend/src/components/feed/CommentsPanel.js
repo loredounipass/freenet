@@ -521,7 +521,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e) }
                 }}
-                placeholder={replyTo ? `Responde a ${replyTo.name}… (Enter para enviar)` : "Escribe un comentario… (Enter para enviar)"}
+                placeholder={replyTo ? `Responde a ${replyTo.name}…` : "Escribe un comentario"}
                 rows={1}
                 style={{
                   width: '100%',
@@ -595,12 +595,7 @@ export default function CommentsPanel({ post, open, onClose, addComment, getComm
             </div>
           </div>
 
-          <div style={{
-            marginTop: '0.5rem', paddingLeft: '2.65rem',
-            fontSize: '0.73rem', color: '#6f8a96',
-          }}>
-            Shift + Enter para nueva línea
-          </div>
+
         </form>
       </div>
 
