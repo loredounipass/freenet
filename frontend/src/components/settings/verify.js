@@ -49,7 +49,7 @@ const EmailVerificationComponent = () => {
 
     return (
         <div className="settings-full-page">
-            <div className="settings-section-wrapper" style={{ maxWidth: '32rem' }}>
+            <div className="settings-section-wrapper">
                 {!showCloseMessage ? (
                     <>
                         <h1 className="settings-title-large">

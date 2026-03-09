@@ -39,8 +39,8 @@ function Settings() {
     return (
         <div className="settings-container">
             <div className="settings-card">
-                {/* Sidebar */}
-                <div className="settings-sidebar">
+                {/* Sidebar - fixed side navigation on small screens */}
+                <div className="settings-sidebar sidebar-fixed" role="navigation" aria-label="Settings navigation">
                     <ul className="sidebar-list">
                         {sections.map(({ id, label, icon }) => (
                             <li key={id}>

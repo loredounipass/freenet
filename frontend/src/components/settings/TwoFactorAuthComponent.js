@@ -97,12 +97,17 @@ const TwoFactorAuthComponent = () => {
   );
 
   return (
-    <div className="settings-2fa-container">
-      <h2 className="settings-title" style={{ marginBottom: '1.5rem' }}>
-        2FA Auth
-      </h2>
-      
-      <div className="settings-2fa-row">
+    <div className="settings-section-wrapper">
+      <div className="settings-form-card">
+        <div className="settings-section-header">
+          <div className="settings-large-icon">
+            <CheckCircleIcon className="settings-large-icon-inner" />
+          </div>
+          <h2 className="settings-title">2FA Auth</h2>
+        </div>
+
+        <div className="settings-2fa-container">
+          <div className="settings-2fa-row">
         <div className="settings-2fa-status">
           <span style={{ marginRight: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
             {isTokenEnabled ? 'Desactivar' : 'Activar'}
@@ -158,20 +163,22 @@ const TwoFactorAuthComponent = () => {
       )}
 
       {/* Custom Snackbar */}
-      {(snackbar.open || error) && (
-        <div className={`custom-snackbar ${snackbar.severity === 'success' ? 'success' : 'error'} ${error ? 'error' : ''}`}>
-          <span>{snackbar.open ? snackbar.message : error}</span>
-          <button 
-            onClick={() => {
-                if(error) setError(null);
-                else handleCloseSnackbar();
-            }}
-            className="snackbar-close"
-          >
-            <CloseIcon fontSize="small" />
-          </button>
+          {(snackbar.open || error) && (
+            <div className={`custom-snackbar ${snackbar.severity === 'success' ? 'success' : 'error'} ${error ? 'error' : ''}`}>
+              <span>{snackbar.open ? snackbar.message : error}</span>
+              <button 
+                onClick={() => {
+                    if(error) setError(null);
+                    else handleCloseSnackbar();
+                }}
+                className="snackbar-close"
+              >
+                <CloseIcon fontSize="small" />
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

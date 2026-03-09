@@ -88,7 +88,7 @@ function MainContent() {
 
                 {/* All other routes inside a centred Container */}
                 <Route path="/" element={<PrivateRoute><WithContainer><Home /></WithContainer></PrivateRoute>} />
-                <Route path="/settings" element={<PrivateRoute><WithContainer><Settings /></WithContainer></PrivateRoute>} />
+                <Route path="/settings" element={<PrivateRoute><WithFeedContainer><Settings /></WithFeedContainer></PrivateRoute>} />
                 <Route path="/feed" element={<PrivateRoute><WithFeedContainer><FeedList /></WithFeedContainer></PrivateRoute>} />
                 <Route path="/feed/:id" element={<PrivateRoute><WithFeedContainer><PostPage /></WithFeedContainer></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />

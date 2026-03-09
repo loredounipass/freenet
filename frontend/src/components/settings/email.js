@@ -45,7 +45,7 @@ const EmailVerificationStatus = () => {
 
     return (
         <div className="settings-full-page">
-            <div className="settings-section-wrapper" style={{ maxWidth: '32rem' }}>
+            <div className="settings-section-wrapper">
                 <h1 className="settings-title" style={{ marginBottom: '1rem' }}>
                     Verificar Estado del Correo Electrónico
                 </h1>

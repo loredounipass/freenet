@@ -647,19 +647,26 @@ a {
     cursor: pointer;
   }
 
-  /* Reduce padding and icon size so items don't wrap/disappear */
+  /* Reduce padding so items don't wrap; increase icon sizes for touch */
   .nav-link {
-    padding: 0.2rem 0.35rem;
+    padding: 0.24rem 0.45rem;
   }
 
+  /* Slightly larger icons on small screens to improve tap targets */
   .nav-icon svg {
-    font-size: 1.15rem;
+    font-size: 1.4rem;
   }
 
-  /* Slightly larger magnifier on small screens for better touch targets */
+  /* Larger magnifier on small screens for better touch targets */
   .nav-search-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Increase menu/icon size for mobile nav toggles */
+  .icon-menu {
+    width: 24px;
+    height: 24px;
   }
 
   .logo-text {
@@ -668,6 +675,20 @@ a {
 
   .home-title {
     font-size: 1.75rem
+  }
+
+  /* Slightly smaller avatar on small screens to save space */
+  .avatar-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .avatar-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9999px;
+    display: block;
   }
 }
 
@@ -3769,6 +3790,12 @@ a {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   background: linear-gradient(180deg, #0d1720 0%, #0b1521 100%);
   border: 1px solid var(--fn-border);
+  /* Keep the settings card visually centered on large screens
+     while allowing mobile rules (inside the small-screen media
+     query) to make it full-bleed. */
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .settings-sidebar {
@@ -4214,8 +4241,19 @@ a {
     margin-right: 0;
   }
 
+  /* Ensure the sidebar becomes a fixed, narrow side navigation on mobile
+     so it does NOT resize or collapse when different sections render. */
   .settings-sidebar {
-    width: 17%;
+    /* default mobile width (kept constant) */
+    width: 56px;
+    min-width: 56px;
+    flex: 0 0 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0.5rem;
+    background: transparent;
+    border-right: none;
   }
 
   .settings-sidebar .sidebar-text {
@@ -4225,6 +4263,57 @@ a {
   .settings-header .settings-title {
     font-size: 1.5rem;
   }
+
+  /* Sidebar fixed layout: center icons and use full-height column */
+  .settings-sidebar .sidebar-list {
+    align-items: center;
+    width: 100%;
+    padding-left: 0;
+  }
+
+  .settings-sidebar .sidebar-btn {
+    justify-content: center;
+    padding: 0.6rem 0;
+    border-left: none;
+    width: 100%;
+  }
+
+  .settings-sidebar .sidebar-icon {
+    margin-right: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Make settings card full-bleed on small screens (edge-to-edge) */
+  .settings-card {
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Keep settings card min-height on mobile so it doesn't collapse when a section is small */
+  .settings-card {
+    min-height: calc(100vh - 120px);
+  }
+
+  /* Allow section wrappers to stretch the full width on mobile */
+  .settings-section-wrapper {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    width: 100%;
+  }
+
+  /* Reduce inner padding so the content visually reaches the screen edges */
+  .settings-content {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
 }
 
 /* --- Additional Settings Components Styles --- */
@@ -4232,7 +4321,8 @@ a {
 /* Shared Section Styles */
 .settings-section-wrapper {
   width: 100%;
-  max-width: 24rem;
+  /* Match the profile card width so all sections share the same box size */
+  max-width: 32rem;
   margin-left: auto;
   margin-right: auto;
 }
@@ -4322,7 +4412,8 @@ a {
 /* 2FA Styles */
 .settings-2fa-container {
   width: 100%;
-  max-width: 28rem;
+  /* keep consistent with .settings-section-wrapper */
+  max-width: 32rem;
   margin-left: auto;
   margin-right: auto;
   padding: 1.5rem;
