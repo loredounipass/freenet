@@ -56,11 +56,23 @@ function MainBox() {
     const location = useLocation()
     const isVideoPage = location.pathname === '/videos'
 
+    // Public routes should share the same background as the Feed (`--fn-dark`)
+    const publicPaths = new Set([
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/verifytoken',
+        '/resendtoken',
+    ])
+
+    const isPublic = publicPaths.has(location.pathname)
+
     return (
         <Box
             component="main"
             sx={{
-                backgroundColor: 'transparent',
+                backgroundColor: isPublic ? 'var(--fn-dark)' : 'transparent',
                 flexGrow: 1,
                 height: '100vh',
                 overflow: isVideoPage ? 'hidden' : 'auto',
