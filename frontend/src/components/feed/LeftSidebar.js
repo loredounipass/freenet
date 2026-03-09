@@ -91,8 +91,8 @@ export default function LeftSidebar() {
 
         <div style={{display:'flex', flexDirection:'column', gap:8, marginTop:6}}>
           <div style={{display:'flex', alignItems:'center', gap:8, padding:'0.45rem', borderRadius:8, border:'1px solid var(--fn-border)', background:'linear-gradient(180deg, rgba(255,255,255,0.01), transparent)'}}>
-            <div style={{width:36, height:36, borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F7931A,#E2761B)'}}>
-              <img src={btcLogo} alt="BTC" style={{width:20, height:20, objectFit:'contain'}} />
+            <div style={{width:36, height:36, minWidth:36, minHeight:36, flex:'0 0 36px', aspectRatio:'1 / 1', borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F7931A,#E2761B)'}}>
+              <img src={btcLogo} alt="BTC" style={{width:20, height:20, maxWidth:'100%', maxHeight:'100%', objectFit:'contain', display:'block'}} />
             </div>
             <div style={{display:'flex', flexDirection:'column', minWidth:0}}>
               <div style={{fontSize:13, fontWeight:700, color:'var(--fn-text)'}}>Bitcoin</div>
@@ -110,8 +110,8 @@ export default function LeftSidebar() {
           </div>
 
           <div style={{display:'flex', alignItems:'center', gap:8, padding:'0.45rem', borderRadius:8, border:'1px solid var(--fn-border)', background:'linear-gradient(180deg, rgba(255,255,255,0.01), transparent)'}}>
-            <div style={{width:36, height:36, borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#22c1c3,#1e90ff)'}}>
-              <img src={usdtLogo} alt="USDT" style={{width:20, height:20, objectFit:'contain'}} />
+            <div style={{width:36, height:36, minWidth:36, minHeight:36, flex:'0 0 36px', aspectRatio:'1 / 1', borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#22c1c3,#1e90ff)'}}>
+              <img src={usdtLogo} alt="USDT" style={{width:20, height:20, maxWidth:'100%', maxHeight:'100%', objectFit:'contain', display:'block'}} />
             </div>
             <div style={{display:'flex', flexDirection:'column', minWidth:0}}>
               <div style={{fontSize:13, fontWeight:700, color:'var(--fn-text)'}}>USDT</div>
