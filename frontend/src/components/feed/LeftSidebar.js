@@ -9,6 +9,7 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
 import ExploreIcon from '@mui/icons-material/Explore'
 import SettingsIcon from '@mui/icons-material/Settings'
+import TagFacesIcon from '@mui/icons-material/TagFaces'
 import UserAvatar from '../common/UserAvatar'
 
 export default function LeftSidebar() {
@@ -57,6 +58,11 @@ export default function LeftSidebar() {
       <div style={{ borderTop: '1px solid var(--fn-border)', paddingTop: 8 }} />
 
       <div className="fb-left-nav" style={{display:'flex', flexDirection:'column', gap:16}}>
+        <button className="fb-left-item nav-link" onClick={() => nav('/meme-factory')} style={buttonStyle()} aria-label="meme-factory">
+          <span className="nav-icon" style={{fontSize:32, display:'inline-flex', alignItems:'center', padding:6, borderRadius:8, background:'linear-gradient(135deg, var(--fn-teal), var(--fn-blue))', color:'#04111a'}}><TagFacesIcon style={{fontSize:24}} /></span>
+          <span style={{marginLeft:14, fontSize:16, fontWeight:700}}>Meme Factory</span>
+        </button>
+
         <button className="fb-left-item nav-link" onClick={() => nav('/')} style={buttonStyle()} aria-label="dashboard">
           <span className="nav-icon teal" style={{fontSize:32, display:'inline-flex', alignItems:'center'}}><DynamicFeedIcon style={{fontSize:32}} /></span>
           <span style={{marginLeft:14, fontSize:16, fontWeight:700}}>Dashboard</span>
