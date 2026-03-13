@@ -8,6 +8,10 @@ import LiveTvIcon from '@mui/icons-material/LiveTv';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import ExploreIcon from '@mui/icons-material/Explore';
+import SettingsIcon from '@mui/icons-material/Settings';
+import TagFacesIcon from '@mui/icons-material/TagFaces';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
 import SearchModal from './SearchModal';
 import UserAvatar from './common/UserAvatar';
 
@@ -41,6 +45,10 @@ function Navbar() {
       navigate('/settings');
     } else if (key === 'profile') {
       navigate('/profile');
+    } else if (key === 'activity') {
+      navigate('/activity');
+    } else if (key === 'meme') {
+      navigate('/meme-factory');
     }
   };
 
@@ -109,9 +117,26 @@ function Navbar() {
             {menuOpen && (
               <div className="avatar-menu">
                 <div className="greeting">{t('nav.hi', { firstName: auth.firstName })}</div>
-                <button onClick={() => handleMenuAction('profile')}>{t('nav.profile')}</button>
-                <button onClick={() => handleMenuAction('settings')}>{t('nav.settings')}</button>
-                <button onClick={() => handleMenuAction('logout')} className="danger">{t('nav.logout')}</button>
+                <button onClick={() => handleMenuAction('profile')}>
+                  <span className="nav-icon" style={{fontSize:18, marginRight:8}}><PersonIcon style={{fontSize:18}}/></span>
+                  {t('nav.profile')}
+                </button>
+                <button onClick={() => handleMenuAction('settings')}>
+                  <span className="nav-icon" style={{fontSize:18, marginRight:8}}><SettingsIcon style={{fontSize:18}}/></span>
+                  {t('nav.settings')}
+                </button>
+                <button onClick={() => handleMenuAction('activity')}>
+                  <span className="nav-icon" style={{fontSize:18, marginRight:8}}><ExploreIcon style={{fontSize:18}}/></span>
+                  Activity
+                </button>
+                <button onClick={() => handleMenuAction('meme')}>
+                  <span className="nav-icon" style={{fontSize:18, marginRight:8}}><TagFacesIcon style={{fontSize:18}}/></span>
+                  Meme Factory
+                </button>
+                <button onClick={() => handleMenuAction('logout')} className="danger">
+                  <span className="nav-icon" style={{fontSize:18, marginRight:8}}><LogoutIcon style={{fontSize:18}}/></span>
+                  {t('nav.logout')}
+                </button>
               </div>
             )}
           </div>
@@ -127,9 +152,11 @@ function Navbar() {
                 <span className="nav-label">{n.label}</span>
               </Link>
             ))}
-            <button onClick={() => handleMenuAction('profile')} className="mobile-item">{t('nav.profile')}</button>
-            <button onClick={() => handleMenuAction('settings')} className="mobile-item">{t('nav.settings')}</button>
-            <button onClick={() => handleMenuAction('logout')} className="mobile-item danger">{t('nav.logout')}</button>
+            <button onClick={() => handleMenuAction('profile')} className="mobile-item"><span className="nav-icon" style={{fontSize:18, marginRight:8}}><HomeIcon style={{fontSize:18}}/></span>{t('nav.profile')}</button>
+            <button onClick={() => handleMenuAction('settings')} className="mobile-item"><span className="nav-icon" style={{fontSize:18, marginRight:8}}><SettingsIcon style={{fontSize:18}}/></span>{t('nav.settings')}</button>
+            <button onClick={() => handleMenuAction('activity')} className="mobile-item"><span className="nav-icon" style={{fontSize:18, marginRight:8}}><ExploreIcon style={{fontSize:18}}/></span>Activity</button>
+            <button onClick={() => handleMenuAction('meme')} className="mobile-item"><span className="nav-icon" style={{fontSize:18, marginRight:8}}><TagFacesIcon style={{fontSize:18}}/></span>Meme Factory</button>
+            <button onClick={() => handleMenuAction('logout')} className="mobile-item danger"><span className="nav-icon" style={{fontSize:18, marginRight:8}}><LogoutIcon style={{fontSize:18}}/></span>{t('nav.logout')}</button>
           </div>
         </div>
       )}

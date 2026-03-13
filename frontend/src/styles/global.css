@@ -516,13 +516,14 @@ a {
 .avatar-menu {
   position: absolute;
   right: 0;
-  margin-top: 8px;
+  top: calc(100% + 6px);
+  z-index: 40;
   width: 176px;
   background: rgba(15, 18, 20, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  overflow: hidden
+  overflow: hidden;
 }
 
 .avatar-menu .greeting {
@@ -539,6 +540,27 @@ a {
   background: transparent;
   color: #dbeef6;
   cursor: pointer
+}
+
+/* Align icon + label inside avatar menu and color icons with project blue */
+.avatar-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar-menu .nav-icon {
+  color: var(--fn-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure svg icons inherit the color and use it as fill */
+.avatar-menu .nav-icon svg,
+.mobile-item .nav-icon svg {
+  color: var(--fn-blue);
+  fill: currentColor;
 }
 
 .avatar-menu button:hover {
@@ -564,6 +586,11 @@ a {
   padding: 8px 0;
   color: #e6eef5;
   text-decoration: none
+}
+
+/* Make mobile menu icons use project blue as well */
+.mobile-item .nav-icon {
+  color: var(--fn-blue);
 }
 
 .mobile-item.danger {
