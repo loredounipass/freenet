@@ -103,8 +103,8 @@ function MainContent() {
                 <Route path="/settings" element={<PrivateRoute><WithFeedContainer><Settings /></WithFeedContainer></PrivateRoute>} />
                 <Route path="/feed" element={<PrivateRoute><WithFeedContainer><FeedList /></WithFeedContainer></PrivateRoute>} />
                 <Route path="/feed/:id" element={<PrivateRoute><WithFeedContainer><PostPage /></WithFeedContainer></PrivateRoute>} />
-                <Route path="/profile" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
-                <Route path="/profile/:userId" element={<PrivateRoute><WithContainer><UserProfile /></WithContainer></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><WithProfileContainer><UserProfile /></WithProfileContainer></PrivateRoute>} />
+                <Route path="/profile/:userId" element={<PrivateRoute><WithProfileContainer><UserProfile /></WithProfileContainer></PrivateRoute>} />
                 <Route path="/verifyemail" element={<PrivateRoute><WithContainer><EmailVerificationComponent /></WithContainer></PrivateRoute>} />
                 <Route path="/chat" element={<PrivateRoute><WithContainer><ConversationList /></WithContainer></PrivateRoute>} />
                 <Route path="/chat/:userId" element={<PrivateRoute><WithContainer><ChatView /></WithContainer></PrivateRoute>} />
@@ -140,6 +140,25 @@ function WithFeedContainer({ children }) {
                 mb: { xs: 0, sm: 2 },
                 px: { xs: 0, sm: 0 },
                 position: 'relative',
+            }}
+        >
+            {children}
+        </Box>
+    )
+}
+
+// Profile container: full-width, no horizontal padding, unrestricted scroll
+function WithProfileContainer({ children }) {
+    return (
+        <Box
+            sx={{
+                width: '100%',
+                minHeight: '100%',
+                mt: { xs: 0, sm: 0 },
+                mb: { xs: 0, sm: 2 },
+                px: 0,
+                position: 'relative',
+                overflowX: 'hidden',
             }}
         >
             {children}

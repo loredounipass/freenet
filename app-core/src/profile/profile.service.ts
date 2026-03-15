@@ -139,6 +139,8 @@ export class ProfileService {
     return { following: false, followersCount };
   }
 
+
+  // Update profile
   async upsert(userId: string, dto: UpdateProfileDto) {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
     const data: any = { ...dto };

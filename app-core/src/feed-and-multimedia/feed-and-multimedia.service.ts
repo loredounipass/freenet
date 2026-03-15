@@ -880,12 +880,15 @@ export class FeedAndMultimediaService implements OnModuleInit {
     return out;
   }
 
-  // Get posts by author (public): return recent posts for a specific user
+  // Get posts by author (public): return only posts with media (image or video) for a specific user
   async getPostsByAuthor(authorId: string, limit = 50) {
     if (!authorId || !Types.ObjectId.isValid(authorId)) throw new BadRequestException('Invalid author id');
 
     const posts = await this.feedModel
-      .find({ author: new Types.ObjectId(authorId) })
+      .find({
+        author: new Types.ObjectId(authorId),
+        multimediaId: { $exists: true, $ne: null },
+      })
       .select(`
         _id description type author
         authorFirstName authorLastName

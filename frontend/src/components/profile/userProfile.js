@@ -77,10 +77,6 @@ export default function UserProfile() {
         }
     }, [uploadProfilePhoto, refetch]);
 
-    const handleDashboard = useCallback(() => {
-        navigate('/');
-    }, [navigate]);
-
     const handleEditProfile = useCallback(() => {
         navigate('/settings');
     }, [navigate]);
@@ -88,6 +84,11 @@ export default function UserProfile() {
     const handleEditDetails = useCallback(() => {
         navigate('/settings');
     }, [navigate]);
+
+    // Navigate to chat with this user
+    const handleMessage = useCallback(() => {
+        if (userId) navigate(`/chat/${userId}`);
+    }, [navigate, userId]);
 
     const handleFollow = useCallback(async () => {
         setFollowLoading(true);
@@ -144,32 +145,45 @@ export default function UserProfile() {
         <div className="profile-page">
             {/* Header: cover + avatar + info + actions */}
             <header className="profile-header">
-                <ProfileCover
-                    coverPhotoUrl={profile?.coverPhotoUrl}
-                    onEditCover={handleEditCover}
-                    canEdit={isOwnProfile && !uploadingCover}
-                />
-                <div className="profile-header-content">
-                    <ProfileAvatar
-                        profilePhotoUrl={profile?.profilePhotoUrl}
-                        firstName={profile?.firstName || (isOwnProfile ? auth?.firstName : '') || ''}
-                        lastName={profile?.lastName || (isOwnProfile ? auth?.lastName : '') || ''}
-                        onEditPhoto={handleEditPhoto}
-                        canEdit={isOwnProfile && !uploadingAvatar}
+                {/* Cover photo wrapper — adds side padding and rounds bottom corners */}
+                <div className="profile-cover-wrapper">
+                    <ProfileCover
+                        coverPhotoUrl={profile?.coverPhotoUrl}
+                        onEditCover={handleEditCover}
+                        canEdit={isOwnProfile && !uploadingCover}
                     />
-                    <ProfileInfo
-                        firstName={profile?.firstName || (isOwnProfile ? auth?.firstName : '') || ''}
-                        lastName={profile?.lastName || (isOwnProfile ? auth?.lastName : '') || ''}
-                        followersCount={profile?.followersCount ?? 0}
-                        followingCount={profile?.followingCount ?? 0}
-                        bio={profile?.bio}
-                        isOwnProfile={isOwnProfile}
-                        isFollowing={profile?.isFollowing}
-                        onDashboard={isOwnProfile ? handleDashboard : undefined}
-                        onFollow={!isOwnProfile ? handleFollow : undefined}
-                        onUnfollow={!isOwnProfile ? handleUnfollow : undefined}
-                        followLoading={followLoading}
-                    />
+                </div>
+                {/* Full-width background bar — content inside is max-width centered */}
+                <div className="profile-header-content-bar">
+                    <div className="profile-header-content">
+                        <ProfileAvatar
+                            profilePhotoUrl={profile?.profilePhotoUrl}
+                            firstName={profile?.firstName || (isOwnProfile ? auth?.firstName : '') || ''}
+                            lastName={profile?.lastName || (isOwnProfile ? auth?.lastName : '') || ''}
+                            onEditPhoto={handleEditPhoto}
+                            canEdit={isOwnProfile && !uploadingAvatar}
+                        />
+                        <ProfileInfo
+                            firstName={profile?.firstName || (isOwnProfile ? auth?.firstName : '') || ''}
+                            lastName={profile?.lastName || (isOwnProfile ? auth?.lastName : '') || ''}
+                            followersCount={profile?.followersCount ?? 0}
+                            followingCount={profile?.followingCount ?? 0}
+                            likes={profile?.likes ?? 0}
+                            bio={profile?.bio}
+                            gender={profile?.gender}
+                            relationshipStatus={profile?.relationshipStatus}
+                            interests={profile?.interests || []}
+                            links={profile?.links || []}
+                            isOwnProfile={isOwnProfile}
+                            isFollowing={profile?.isFollowing}
+                            profileId={profile?.owner || userId}
+                            onEditProfile={isOwnProfile ? handleEditProfile : undefined}
+                            onFollow={!isOwnProfile ? handleFollow : undefined}
+                            onUnfollow={!isOwnProfile ? handleUnfollow : undefined}
+                            followLoading={followLoading}
+                            onMessage={!isOwnProfile ? handleMessage : undefined}
+                        />
+                    </div>
                 </div>
             </header>
 
@@ -207,10 +221,12 @@ export default function UserProfile() {
                             <>
                                 {/* ── TODO: grid mixto ordenado por fecha ── */}
                                 {activeTab === 'all' && (() => {
-                                    // All posts sorted by createdAt desc (most recent first)
-                                    const allSorted = [...(posts || [])].sort(
-                                        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                                    );
+                                    // Only show posts that have image or video (exclude text-only posts)
+                                    const allSorted = [...(posts || [])]
+                                        .filter((p) => p.multimediaUrl || p.thumbnailUrl)
+                                        .sort(
+                                            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+                                        );
                                     if (allSorted.length === 0) {
                                         return (
                                             <div className="pvg-empty">
