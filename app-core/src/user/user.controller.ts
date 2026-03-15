@@ -10,11 +10,10 @@ import {
   Patch
 } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
-import { TwoFactorAuthService } from '../two-factor/verification.service';
+import { TwoFactorAuthService } from '../two-factor/verification.module';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
-import { VerifyTokenDto } from '../two-factor/dto/verification.dto';
+import { VerifyTokenDto } from 'src/two-factor/dto';
 import { LocalAuthGuard } from '../guard/auth/local-auth.guard';
 import { AuthenticatedGuard } from '../guard/auth/authenticated.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';

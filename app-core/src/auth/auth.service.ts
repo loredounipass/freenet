@@ -1,9 +1,8 @@
 import { Injectable, UnauthorizedException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
-import { LoginUserDto } from '../user/dto/login-user.dto';
-import { VerifyTokenDto } from '../two-factor/dto/verification.dto';
+import { VerifyTokenDto } from 'src/two-factor/dto';
 import { UserService } from '../user/user.service';
 import { HashService } from '../user/hash.service';
-import { TwoFactorAuthService } from '../two-factor/verification.service';
+import { TwoFactorAuthService } from '../two-factor/verification.module';
 import { EmailService } from '../user/email.service';
 
 
@@ -11,10 +10,10 @@ import { EmailService } from '../user/email.service';
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
-    private hashService: HashService,
-    private twoFactorAuthService: TwoFactorAuthService,
-    private emailService: EmailService,
+    private readonly userService: UserService,
+    private readonly hashService: HashService,
+    private readonly twoFactorAuthService: TwoFactorAuthService,
+    private readonly emailService: EmailService,
   ) {}
 
 
@@ -67,7 +66,7 @@ export class AuthService {
       req.login(user, async (err) => {
         if (err) return reject(new UnauthorizedException('Error al iniciar sesión.'));
 
-        this.emailService.sendLoginNotificationEmail((user as any).email).catch(console.error);
+        void this.emailService.sendLoginNotificationEmail((user as any).email).catch(console.error);
 
         resolve({ msg: 'Logged in!' });
       });

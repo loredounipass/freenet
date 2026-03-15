@@ -66,17 +66,21 @@ function WaveformBars({ pct, playing, isOwn }) {
 }
 
 /* ─── Telegram-style Audio Player ───────────────────────────────── */
-function InlineAudioPlayer({ src, isOwn }) {
+function InlineAudioPlayer({ src, isOwn, duration: initialDuration }) {
   const audioRef = useRef(null);
   const [playing, setPlaying]   = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(initialDuration || 0);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime   = () => setProgress(audio.currentTime || 0);
-    const onLoaded = () => setDuration(audio.duration   || 0);
+    const onLoaded = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
     const onEnded  = () => { setPlaying(false); setProgress(0); };
     audio.addEventListener('timeupdate',     onTime);
     audio.addEventListener('loadedmetadata', onLoaded);
@@ -216,7 +220,7 @@ function ProcessingBubble({ label }) {
 
 /* ─── Main MessageBubble ─────────────────────────────────────────── */
 export default function MessageBubble({ message, isOwn, showTail = true }) {
-  const { content, type, status, createdAt, multimediaUrl } = message;
+  const { content, type, status, createdAt, multimediaUrl, duration } = message;
 
   const resolveUrl = (u) => {
     if (!u) return null;
@@ -251,7 +255,7 @@ export default function MessageBubble({ message, isOwn, showTail = true }) {
         return (
           <>
             {multimediaUrl
-              ? <InlineAudioPlayer src={resolveUrl(multimediaUrl)} isOwn={isOwn} />
+              ? <InlineAudioPlayer src={resolveUrl(multimediaUrl)} isOwn={isOwn} duration={duration} />
               : <ProcessingBubble label={message.multimediaStatus === 'processing' ? 'Procesando audio…' : 'Audio'} />
             }
             {content && <div className="msg-text" style={{ marginTop: 4 }}>{content}</div>}

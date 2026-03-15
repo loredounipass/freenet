@@ -18,13 +18,11 @@ export class MessagesAndMultimediaController {
 
 
   @UseGuards(AuthenticatedGuard)
-    // Limit uploads increased to allow longer videos (configurable): 250MB
-    @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 250 * 1024 * 1024 } }))
+  // Limit uploads increased to allow longer videos (configurable): 250MB
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 250 * 1024 * 1024 } }))
   @Post('upload')
   async createWithFile(@UploadedFile() file: Express.Multer.File, @Body() body: any, @CurrentUser() user: any) {
-    if (!file) throw new BadRequestException('File missing');
-
-    // Build DTO-like object
+    // Delegate validation and processing to the service
     const dto: CreateMessageDto = {
       content: body.content || '',
       type: body.type || ('image' as any),
@@ -33,8 +31,7 @@ export class MessagesAndMultimediaController {
       senderId: user._id.toString(),
     } as CreateMessageDto;
 
-      // Updated for consistency after DTO/schema changes
-      return this.service.createMessageWithFile(file, dto, user._id.toString());
+    return this.service.createMessageWithFile(file, dto, user._id.toString());
   }
 
 

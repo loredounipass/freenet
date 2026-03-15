@@ -3,9 +3,7 @@ import type { Job } from 'bull';
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LocalStorageProvider } from 'src/storage/local.storage.provider';
-import { Multimedia, MultimediaDocument } from './schemas/multimedia.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { MultimediaRepository } from 'src/repositories/multimedia.repository';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
@@ -19,76 +17,65 @@ import { finished } from 'stream/promises';
 import { execSync } from 'child_process';
 
 
-// Prefer the bundled static binaries, but verify they exist. If pnpm flattened packages
-// or install issues removed the binary, fall back to system `ffmpeg`/`ffprobe`.
-try {
+// Try to set up ffmpeg/ffprobe paths without blocking startup.
+(async () => {
   const resolvedFfmpegPath = ffmpegPath || undefined;
-      if (resolvedFfmpegPath) {
-    if ((fs as any).existsSync && (fs as any).existsSync(resolvedFfmpegPath)) {
+  if (resolvedFfmpegPath) {
+    try {
+      await (fsPromises as any).access(resolvedFfmpegPath);
       ffmpeg.setFfmpegPath(resolvedFfmpegPath);
-    } else {
-      // Try to locate ffmpeg in system PATH
-      try {
-        const whichCmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
-        const out = execSync(whichCmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(/\r?\n/).filter(Boolean)[0];
-        if (out) {
-          ffmpeg.setFfmpegPath(out);
-        } else {
-          ffmpeg.setFfmpegPath(undefined);
-        }
-      } catch (e) {
-        ffmpeg.setFfmpegPath(undefined);
-      }
+    } catch {
+      // ignore and try system PATH below
     }
   } else {
-    
     try {
+      const { exec } = require('child_process');
       const whichCmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
-      const out = execSync(whichCmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(/\r?\n/).filter(Boolean)[0];
-      if (out) {
-        ffmpeg.setFfmpegPath(out);
-      } else {
-        ffmpeg.setFfmpegPath(undefined);
-      }
-    } catch (e) {
-      
-      ffmpeg.setFfmpegPath(undefined);
+      const out = await new Promise<string | undefined>((resolve) => {
+        exec(whichCmd, (err: any, stdout: string) => resolve((stdout || '').trim()));
+      });
+      if (out) ffmpeg.setFfmpegPath(out);
+    } catch {
+      // ignore
     }
   }
-} catch (e) {
-  try { ffmpeg.setFfmpegPath(undefined); } catch (_) {}
-}
+})();
 
-try {
+(async () => {
   const probePath = (ffprobePath && (ffprobePath as any).path) || ffprobePath || undefined;
-  if (probePath && (fs as any).existsSync && (fs as any).existsSync(probePath)) {
-    ffmpeg.setFfprobePath(probePath);
-  } else {
-    // Try to locate ffprobe in system PATH
+  if (probePath) {
     try {
+      await (fsPromises as any).access(probePath);
+      ffmpeg.setFfprobePath(probePath);
+    } catch {
+      // fallback below
+    }
+  } else {
+    try {
+      const { exec } = require('child_process');
       const whichProbe = process.platform === 'win32' ? 'where ffprobe' : 'which ffprobe';
-      const outp = execSync(whichProbe, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(/\r?\n/).filter(Boolean)[0];
-      if (outp) {
-        ffmpeg.setFfprobePath(outp);
-      } else {
-        try { ffmpeg.setFfprobePath(undefined); } catch (_) {}
-      }
-    } catch (e) {
-      try { ffmpeg.setFfprobePath(undefined); } catch (_) {}
+      const outp = await new Promise<string | undefined>((resolve) => {
+        exec(whichProbe, (err: any, stdout: string) => resolve((stdout || '').trim()));
+      });
+      if (outp) ffmpeg.setFfprobePath(outp);
+    } catch {
+      // ignore
     }
   }
-} catch (e) {
-  try { ffmpeg.setFfprobePath(undefined); } catch (_) {}
-}
+})();
 
 @Processor('multimedia')
 @Injectable()
 export class MultimediaProcessor {
   constructor(
     private readonly storage: LocalStorageProvider,
-    @InjectModel(Multimedia.name) private multimediaModel: Model<MultimediaDocument>,
+    private readonly multimediaRepository: MultimediaRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private get multimediaModel() {
+    return this.multimediaRepository;
+  }
 
   @Process('process')
   async handle(job: Job) {
@@ -307,7 +294,7 @@ export class MultimediaProcessor {
       try {
         // log for debugging so dev can confirm the final public URL
         try { console.log(`[MultimediaProcessor] multimedia.ready url=${publicUrl} encoded=${encodedUrl} messageId=${job.data.messageId}`); } catch (_) {}
-        this.eventEmitter.emit('multimedia.ready', {
+        void this.eventEmitter.emit('multimedia.ready', {
           multimediaId: multimediaId,
           messageId: job.data.messageId,
           url: encodedUrl,

@@ -9,6 +9,10 @@ import { UserModule } from '../user/user.module';
 import { BullModule } from '@nestjs/bull';
 import { LocalStorageProvider } from '../storage/local.storage.provider';
 import { MultimediaProcessor } from './messages-and-multimedia.processor';
+import { MultimediaRepository } from 'src/repositories/multimedia.repository';
+import { MessageRepository } from 'src/repositories/message.repository';
+
+export { MultimediaRepository, MessageRepository };
 
 @Module({
   imports: [
@@ -20,7 +24,7 @@ import { MultimediaProcessor } from './messages-and-multimedia.processor';
     forwardRef(() => UserModule),
   ],
   controllers: [MessagesAndMultimediaController],
-  providers: [MessagesAndMultimediaService, MessagesGateway, LocalStorageProvider, MultimediaProcessor],
-  exports: [MessagesAndMultimediaService, MongooseModule],
+  providers: [MessagesAndMultimediaService, MessagesGateway, LocalStorageProvider, MultimediaProcessor, MultimediaRepository, MessageRepository],
+  exports: [MultimediaRepository, MessageRepository],
 })
 export class MessagesAndMultimediaModule {}

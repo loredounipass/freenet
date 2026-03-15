@@ -23,18 +23,13 @@ export class FeedAndMultimediaController {
   }
 
 
-  // Separate endpoint for creating a post with a file upload. This allows clients to upload multimedia content along with the post data.
+  // Separate endpoint for creating a post with a file upload. Delegate validation and processing to the service.
   @UseGuards(AuthenticatedGuard)
   // Increase fileSize limit to support longer videos (approx 250MB)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 250 * 1024 * 1024 } }))
   @Post('upload')
   async createWithFile(@UploadedFile() file: Express.Multer.File, @Body() body: any, @CurrentUser() user: any) {
-    if (!file) throw new BadRequestException('File missing');
-
-    // Reject audio uploads for feed — feed supports only images and videos
-    if (file.mimetype && file.mimetype.startsWith('audio/')) {
-      throw new BadRequestException('Audio uploads are not supported for feed posts');
-    }
+    // All validation/processing is handled inside the service
     return this.service.createPostWithFile(file, body, user._id.toString());
   }
 

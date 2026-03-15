@@ -26,6 +26,9 @@ export class Message {
   @Prop({ enum: ['sent', 'delivered', 'read'], default: 'sent' })
   status: string;
 
+  @Prop()
+  duration?: number;
+
   _id?: string;
 }
 

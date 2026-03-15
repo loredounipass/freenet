@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Profile, ProfileDocument } from './schemas/profile.schema';
+import { ProfileRepository } from '../user/user.module';
 import { FeedAndMultimediaService } from 'src/feed-and-multimedia/feed-and-multimedia.service';
 import { UserService } from 'src/user/user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -12,7 +12,7 @@ import * as crypto from 'crypto';
 @Injectable()
 export class ProfileService {
   constructor(
-    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
+    private readonly profileRepository: ProfileRepository,
     private readonly storage: LocalStorageProvider,
     private readonly feedService: FeedAndMultimediaService,
     private readonly userService: UserService,
@@ -20,14 +20,14 @@ export class ProfileService {
 
   async getByOwner(userId: string) {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
-    const doc = await this.profileModel.findOne({ owner: new Types.ObjectId(userId) }).lean().exec();
+    const doc = await this.profileRepository.findOne({ owner: new Types.ObjectId(userId) });
     return doc;
   }
 
   // Public view for other users: expose only non-sensitive fields and counts
   async getPublicById(userId: string) {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
-    const doc: any = await this.profileModel.findOne({ owner: new Types.ObjectId(userId) }).lean().exec();
+    const doc: any = await this.profileRepository.findOne({ owner: new Types.ObjectId(userId) });
 
     // Fetch user record to use as name/avatar fallback (in case profile doc has no firstName)
     let userFallback: any = null;
@@ -89,7 +89,7 @@ export class ProfileService {
   async getFollowStatus(currentUserId: string, targetUserId: string): Promise<{ following: boolean }> {
     if (!currentUserId || !Types.ObjectId.isValid(currentUserId)) throw new BadRequestException('Invalid current user id');
     if (!targetUserId || !Types.ObjectId.isValid(targetUserId)) throw new BadRequestException('Invalid target user id');
-    const target = await this.profileModel.findOne({ owner: new Types.ObjectId(targetUserId) }).lean().exec();
+    const target = await this.profileRepository.findOne({ owner: new Types.ObjectId(targetUserId) });
     if (!target) throw new NotFoundException('Profile not found');
     const followers = (target as any).followers || [];
     const following = followers.some((id: Types.ObjectId) => id.toString() === currentUserId);
@@ -103,17 +103,17 @@ export class ProfileService {
     if (currentUserId === targetUserId) throw new BadRequestException('Cannot follow yourself');
     const currentOid = new Types.ObjectId(currentUserId);
     const targetOid = new Types.ObjectId(targetUserId);
-    await this.profileModel.findOneAndUpdate(
+    await this.profileRepository.findOneAndUpdate(
       { owner: targetOid },
       { $addToSet: { followers: currentOid } },
       { upsert: true, new: true },
-    ).exec();
-    await this.profileModel.findOneAndUpdate(
+    );
+    await this.profileRepository.findOneAndUpdate(
       { owner: currentOid },
       { $addToSet: { following: targetOid } },
       { upsert: true, new: true },
-    ).exec();
-    const target = await this.profileModel.findOne({ owner: targetOid }).lean().exec();
+    );
+    const target = await this.profileRepository.findOne({ owner: targetOid });
     const followersCount = Array.isArray((target as any).followers) ? (target as any).followers.length : 0;
     return { following: true, followersCount };
   }
@@ -124,17 +124,17 @@ export class ProfileService {
     if (!targetUserId || !Types.ObjectId.isValid(targetUserId)) throw new BadRequestException('Invalid target user id');
     const currentOid = new Types.ObjectId(currentUserId);
     const targetOid = new Types.ObjectId(targetUserId);
-    await this.profileModel.findOneAndUpdate(
+    await this.profileRepository.findOneAndUpdate(
       { owner: targetOid },
       { $pull: { followers: currentOid } },
       { new: true },
-    ).exec();
-    await this.profileModel.findOneAndUpdate(
+    );
+    await this.profileRepository.findOneAndUpdate(
       { owner: currentOid },
       { $pull: { following: targetOid } },
       { new: true },
-    ).exec();
-    const target = await this.profileModel.findOne({ owner: targetOid }).lean().exec();
+    );
+    const target = await this.profileRepository.findOne({ owner: targetOid });
     const followersCount = target ? (Array.isArray((target as any).followers) ? (target as any).followers.length : 0) : 0;
     return { following: false, followersCount };
   }
@@ -144,7 +144,7 @@ export class ProfileService {
   async upsert(userId: string, dto: UpdateProfileDto) {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new BadRequestException('Invalid user id');
     const data: any = { ...dto };
-    const res = await this.profileModel.findOneAndUpdate({ owner: new Types.ObjectId(userId) }, data, { upsert: true, new: true }).exec();
+    const res = await this.profileRepository.findOneAndUpdate({ owner: new Types.ObjectId(userId) }, data, { upsert: true, new: true });
     return res;
   }
 
@@ -169,7 +169,7 @@ export class ProfileService {
     if (type === 'profile') update.profilePhotoUrl = publicUrl;
     if (type === 'cover') update.coverPhotoUrl = publicUrl;
 
-    const profile = await this.profileModel.findOneAndUpdate({ owner: new Types.ObjectId(userId) }, { $set: update }, { upsert: true, new: true }).exec();
+    const profile = await this.profileRepository.findOneAndUpdate({ owner: new Types.ObjectId(userId) }, { $set: update }, { upsert: true, new: true });
 
     return { profile, url: publicUrl, thumbnailUrl: thumbRes.url };
   }

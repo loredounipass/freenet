@@ -44,7 +44,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       const rawSid = cookies['connect.sid'] || cookies['sid'] || null;
       if (!rawSid) {
         this.logger.warn(`No session cookie present for socket ${client.id}`);
-        client.emit('error', { message: 'Unauthorized' });
+        void client.emit('error', { message: 'Unauthorized' });
         client.disconnect();
         return;
       }
@@ -59,7 +59,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       const sess = await this.getSession(sid);
       if (!sess) {
         this.logger.warn(`Session not found for socket ${client.id}`);
-        client.emit('error', { message: 'Unauthorized' });
+        void client.emit('error', { message: 'Unauthorized' });
         client.disconnect();
         return;
       }
@@ -67,7 +67,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       const passportUser = sess.passport && sess.passport.user ? sess.passport.user : null;
       if (!passportUser) {
         this.logger.warn(`No passport user in session for socket ${client.id}`);
-        client.emit('error', { message: 'Unauthorized' });
+        void client.emit('error', { message: 'Unauthorized' });
         client.disconnect();
         return;
       }
@@ -80,7 +80,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       this.logger.log(`Socket ${client.id} authenticated and joined user:${userId}`);
     } catch (e) {
       this.logger.error(`Error during socket auth for ${client.id}: ${e}`);
-      client.emit('error', { message: 'Unauthorized' });
+      void client.emit('error', { message: 'Unauthorized' });
       client.disconnect();
     }
   }
@@ -94,7 +94,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     });
   }
 
-  async handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
@@ -119,12 +119,12 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       const receiveTargets = new Set<string>([...roomSockets, ...receiverSockets]);
       // emit 'receiveMessage' once per unique socket
       for (const sockId of receiveTargets) {
-        this.server.to(sockId).emit('receiveMessage', payload);
+        void this.server.to(sockId).emit('receiveMessage', payload);
       }
 
       // emit 'messageSent' to sender sockets (unique)
       for (const sockId of senderSockets) {
-        this.server.to(sockId).emit('messageSent', payload);
+        void this.server.to(sockId).emit('messageSent', payload);
       }
     } catch (err) {
       this.logger.warn(`Error emitting message.created event: ${err}`);
@@ -145,11 +145,11 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
 
       const receiveTargets = new Set<string>([...roomSockets, ...receiverSockets]);
       for (const sockId of receiveTargets) {
-        this.server.to(sockId).emit('messageUpdated', payload);
+        void this.server.to(sockId).emit('messageUpdated', payload);
       }
 
       for (const sockId of senderSockets) {
-        this.server.to(sockId).emit('messageUpdated', payload);
+        void this.server.to(sockId).emit('messageUpdated', payload);
       }
     } catch (err) {
       this.logger.warn(`Error emitting message.updated event: ${err}`);
@@ -159,18 +159,18 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
   @SubscribeMessage('joinChat')
   handleJoinChat(client: Socket, payload: { otherUserId: string }) {
     if (!client.data?.user || !client.data.user._id) {
-      client.emit('error', { message: 'Unauthorized' });
+      void client.emit('error', { message: 'Unauthorized' });
       return;
     }
 
     const senderId = client.data.user._id.toString();
     if (!senderId) {
-      client.emit('error', { message: 'Unauthorized' });
+      void client.emit('error', { message: 'Unauthorized' });
       return;
     }
 
     if (!payload || !payload.otherUserId) {
-      client.emit('error', { message: 'Missing otherUserId' });
+      void client.emit('error', { message: 'Missing otherUserId' });
       return;
     }
 

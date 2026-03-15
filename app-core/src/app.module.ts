@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bull';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
@@ -14,7 +13,7 @@ import { ProfileModule } from './profile/profile.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 
-// This is the main application module that imports and configures various modules such as ConfigModule for environment variables, MongooseModule for MongoDB connection, ThrottlerModule for rate limiting, BullModule for Redis-based queues, and other feature modules like UserModule, WalletModule, AuthModule, TransactionModule, ProviderModule, and TwoFactorAuthModule. It also provides the AppService for handling application-level logic.
+// This is the main application module that imports and configures various modules and services.
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
@@ -48,6 +47,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     TwoFactorAuthModule,
     DonationsModule
   ],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule { }

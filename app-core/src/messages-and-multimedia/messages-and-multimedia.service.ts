@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Message, MessageDocument } from './schemas/message.schema';
+import { Types } from 'mongoose';
 import { Multimedia, MultimediaDocument } from './schemas/multimedia.schema';
+import { MessageRepository } from 'src/repositories/message.repository';
+import { MultimediaRepository } from 'src/repositories/multimedia.repository';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UserService } from 'src/user/user.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -13,10 +13,10 @@ import type { Queue } from 'bull';
 import { LocalStorageProvider } from 'src/storage/local.storage.provider';
 
 @Injectable()
-export class MessagesAndMultimediaService {
+export class MessagesAndMultimediaService implements OnModuleInit {
   constructor(
-    @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
-    @InjectModel(Multimedia.name) private multimediaModel: Model<MultimediaDocument>,
+    private readonly messageRepository: MessageRepository,
+    private readonly multimediaRepository: MultimediaRepository,
     private readonly userService: UserService,
     private readonly eventEmitter: EventEmitter2,
     @InjectQueue('multimedia') private readonly multimediaQueue: Queue,
@@ -30,28 +30,31 @@ export class MessagesAndMultimediaService {
         try {
           if (payload?.messageId) {
             // Update only the multimediaStatus on the message (schema doesn't include multimediaUrl)
-            const updated = await this.messageModel.findByIdAndUpdate(payload.messageId, {
+            const updated = await this.messageRepository.findByIdAndUpdate(payload.messageId, {
               multimediaStatus: 'ready',
-            }, { new: true }).lean().exec();
+            }, { new: true });
 
-            if (updated) {
-              const out = {
-                _id: updated._id?.toString(),
-                content: updated.content,
-                type: updated.type,
-                sender: updated.sender?.toString(),
-                receiver: updated.receiver?.toString(),
-                multimediaId: updated.multimediaId,
-                multimediaStatus: updated.multimediaStatus,
-                // Include the URL coming from the multimedia processor payload so clients can load it
-                multimediaUrl: payload.url,
-                thumbnailUrl: payload.thumbnailUrl,
-                status: updated.status,
-                createdAt: (updated as any).createdAt,
-                updatedAt: (updated as any).updatedAt,
-              };
-              this.eventEmitter.emit('message.updated', out);
-            }
+          if (updated) {
+                // In newer Mongoose versions, the updated document is wrapped in a value property
+                const updatedDoc: any = (updated as any).value ?? updated;
+                const out = {
+                  _id: updatedDoc._id?.toString(),
+                  content: updatedDoc.content,
+                  type: updatedDoc.type,
+                  sender: updatedDoc.sender?.toString(),
+                  receiver: updatedDoc.receiver?.toString(),
+                  multimediaId: updatedDoc.multimediaId,
+                  multimediaStatus: updatedDoc.multimediaStatus,
+                  // Include the URL coming from the multimedia processor payload so clients can load it
+                  multimediaUrl: payload.url,
+                  thumbnailUrl: payload.thumbnailUrl,
+                  duration: payload.metadata?.duration,
+                  status: updatedDoc.status,
+                  createdAt: (updatedDoc as any).createdAt,
+                  updatedAt: (updatedDoc as any).updatedAt,
+                };
+                void this.eventEmitter.emit('message.updated', out);
+              }
           }
         } catch (_) {}
       });
@@ -59,24 +62,26 @@ export class MessagesAndMultimediaService {
       this.eventEmitter.on('multimedia.failed', async (payload: any) => {
         try {
           if (payload?.messageId) {
-            const updated = await this.messageModel.findByIdAndUpdate(payload.messageId, {
-              multimediaStatus: 'failed',
-            }, { new: true }).lean().exec();
+            const updated = await this.messageRepository.findByIdAndUpdate(payload.messageId, {
+              multimediaStatus: 'ready',
+              duration: payload.metadata?.duration,
+            }, { new: true });
             if (updated) {
+              const updatedDoc: any = (updated as any).value ?? updated;
               const out = {
-                _id: updated._id?.toString(),
-                content: updated.content,
-                type: updated.type,
-                sender: updated.sender?.toString(),
-                receiver: updated.receiver?.toString(),
-                multimediaId: updated.multimediaId,
-                multimediaStatus: updated.multimediaStatus,
+                _id: updatedDoc._id?.toString(),
+                content: updatedDoc.content,
+                type: updatedDoc.type,
+                sender: updatedDoc.sender?.toString(),
+                receiver: updatedDoc.receiver?.toString(),
+                multimediaId: updatedDoc.multimediaId,
+                multimediaStatus: updatedDoc.multimediaStatus,
                 multimediaUrl: payload.url || null,
-                status: updated.status,
-                createdAt: (updated as any).createdAt,
-                updatedAt: (updated as any).updatedAt,
+                status: updatedDoc.status,
+                createdAt: (updatedDoc as any).createdAt,
+                updatedAt: (updatedDoc as any).updatedAt,
               };
-              this.eventEmitter.emit('message.updated', out);
+              void this.eventEmitter.emit('message.updated', out);
             }
           }
         } catch (_) {}
@@ -102,7 +107,7 @@ export class MessagesAndMultimediaService {
     if (!receiverExists) throw new NotFoundException('Receiver not found');
 
     // Create message directly (no additional findById after create)
-    const created = await this.messageModel.create({
+    const created = await this.messageRepository.create({
       content: dto.content,
       type: dto.type,
       sender: new Types.ObjectId(senderId),
@@ -125,7 +130,7 @@ export class MessagesAndMultimediaService {
     };
 
     // Emit domain event (decoupled from sockets) — typed
-    this.eventEmitter.emit('message.created', payload as MessageCreatedEvent);
+    void this.eventEmitter.emit('message.created', payload as MessageCreatedEvent);
 
     return payload;
   }
@@ -141,15 +146,13 @@ export class MessagesAndMultimediaService {
     const id = new Types.ObjectId(userId);
     // Use two targeted queries so each can use its respective index (sender+createdAt, receiver+createdAt)
     const [sentDocs, receivedDocs] = await Promise.all([
-      this.messageModel
-        .find({ sender: id })
-        .select('_id content type sender receiver multimediaId status createdAt updatedAt')
+      this.messageRepository.find({ sender: id })
+        .select('_id content type sender receiver multimediaId status duration createdAt updatedAt')
         .sort({ createdAt: -1 })
         .lean()
         .exec(),
-      this.messageModel
-        .find({ receiver: id })
-        .select('_id content type sender receiver multimediaId status createdAt updatedAt')
+      this.messageRepository.find({ receiver: id })
+        .select('_id content type sender receiver multimediaId status duration createdAt updatedAt')
         .sort({ createdAt: -1 })
         .lean()
         .exec(),
@@ -174,7 +177,7 @@ export class MessagesAndMultimediaService {
     const multimediaMap: Map<string, any> = new Map();
     if (multimediaIds.length > 0) {
       const uniq = Array.from(new Set(multimediaIds));
-      const mDocs = await this.multimediaModel.find({ _id: { $in: uniq } }).select('_id url thumbnailUrl status').lean().exec();
+    const mDocs = await this.multimediaRepository.find({ _id: { $in: uniq } }).select('_id url thumbnailUrl status duration').lean().exec();
       for (const m of mDocs) multimediaMap.set(m._id?.toString(), m);
     }
 
@@ -188,6 +191,7 @@ export class MessagesAndMultimediaService {
       multimediaStatus: doc.multimediaStatus || (multimediaMap.get(doc.multimediaId?.toString())?.status || null),
       multimediaUrl: multimediaMap.get(doc.multimediaId?.toString())?.url || undefined,
       thumbnailUrl: multimediaMap.get(doc.multimediaId?.toString())?.thumbnailUrl || undefined,
+      duration: multimediaMap.get(doc.multimediaId?.toString())?.duration || doc.duration || undefined,
       status: doc.status,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -201,7 +205,7 @@ export class MessagesAndMultimediaService {
     const owner = new Types.ObjectId(data.ownerId);
     const message = data.messageId ? new Types.ObjectId(data.messageId) : undefined;
 
-    const created = await this.multimediaModel.create({
+    const created = await this.multimediaRepository.create({
       url: data.url,
       type: data.type,
       owner,
@@ -209,7 +213,8 @@ export class MessagesAndMultimediaService {
       message,
     });
 
-    return this.multimediaModel.findById(created._id).populate('owner').exec();
+    // Return populated document via repository to avoid direct model usage
+    return this.multimediaRepository.findById(created._id);
   }
 
 
@@ -233,7 +238,7 @@ export class MessagesAndMultimediaService {
     const uploadResult = await this.storage.upload(file.buffer, stagingKey, file.mimetype);
 
     // Create multimedia doc with status uploading
-    const multimediaDoc = await this.multimediaModel.create({
+    const multimediaDoc = await this.multimediaRepository.create({
       url: uploadResult.url,
       type: dto.type,
       owner: new Types.ObjectId(senderId),
@@ -244,7 +249,7 @@ export class MessagesAndMultimediaService {
     });
 
     // Create message referencing multimedia and mark it as processing for UI
-    const messageDoc = await this.messageModel.create({
+    const messageDoc = await this.messageRepository.create({
       content: dto.content,
       type: dto.type,
       sender: new Types.ObjectId(senderId),
@@ -253,11 +258,10 @@ export class MessagesAndMultimediaService {
       multimediaStatus: 'processing',
     });
 
-    // link multimedia -> message
-    multimediaDoc.message = messageDoc._id;
-    multimediaDoc.status = 'processing';
-    multimediaDoc.url = uploadResult.url;
-    await multimediaDoc.save();
+    // link multimedia -> message using repository, and mark as processing
+    await this.multimediaRepository.updateOne({ _id: multimediaDoc._id }, {
+      $set: { message: messageDoc._id, status: 'processing', url: uploadResult.url }
+    }).exec();
 
     // enqueue processing job (non-blocking)
     await this.multimediaQueue.add('process', {
@@ -282,7 +286,7 @@ export class MessagesAndMultimediaService {
     };
 
     // emit created so clients see message immediately (UI will update when worker finishes)
-    this.eventEmitter.emit('message.created', payload as MessageCreatedEvent);
+    void this.eventEmitter.emit('message.created', payload as MessageCreatedEvent);
 
     return payload;
   }

@@ -39,7 +39,7 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rawSid = cookies['connect.sid'] || cookies['sid'] || null;
       if (!rawSid) {
         this.logger.warn(`No session cookie present for socket ${client.id}`);
-        client.emit('error', { message: 'Unauthorized' });
+        void client.emit('error', { message: 'Unauthorized' });
         client.disconnect();
         return;
       }
@@ -49,14 +49,14 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const sess = await this.getSession(sid);
       if (!sess) {
-        client.emit('error', { message: 'Unauthorized' });
+        void client.emit('error', { message: 'Unauthorized' });
         client.disconnect();
         return;
       }
 
       const passportUser = sess.passport && sess.passport.user ? sess.passport.user : null;
       if (!passportUser) {
-        client.emit('error', { message: 'Unauthorized' });
+        void client.emit('error', { message: 'Unauthorized' });
         client.disconnect();
         return;
       }
@@ -67,7 +67,7 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(`Socket ${client.id} authenticated and joined user:${userId}`);
     } catch (e) {
       this.logger.error(`Error during socket auth for ${client.id}: ${e}`);
-      client.emit('error', { message: 'Unauthorized' });
+      void client.emit('error', { message: 'Unauthorized' });
       client.disconnect();
     }
   }
@@ -81,7 +81,7 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  async handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
@@ -110,7 +110,7 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       const authorSockets = await this.server.in(`user:${authorId}`).allSockets();
-      for (const s of authorSockets) this.server.to(s).emit('postCreated', out);
+      for (const s of authorSockets) void this.server.to(s).emit('postCreated', out);
     } catch (e) {
       this.logger.warn(`Error emitting post.created: ${e}`);
     }
@@ -141,13 +141,13 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       const authorSockets = await this.server.in(`user:${authorId}`).allSockets();
-      for (const s of authorSockets) this.server.to(s).emit('postUpdated', out);
+      for (const s of authorSockets) void this.server.to(s).emit('postUpdated', out);
 
       // also notify any post room subscribers
       const postId = payload._id;
       if (postId) {
-        const sockets = await this.server.in(`post:${postId}`).allSockets();
-        for (const s of sockets) this.server.to(s).emit('postUpdated', out);
+      const sockets = await this.server.in(`post:${postId}`).allSockets();
+      for (const s of sockets) void this.server.to(s).emit('postUpdated', out);
       }
     } catch (e) {
       this.logger.warn(`Error emitting post.updated: ${e}`);
@@ -171,12 +171,12 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       const sockets = await this.server.in(postRoom).allSockets();
-      for (const s of sockets) this.server.to(s).emit('commentCreated', out);
+      for (const s of sockets) void this.server.to(s).emit('commentCreated', out);
 
       // also notify the post author via user room if included in payload
       if (payload.author) {
         const authorSockets = await this.server.in(`user:${payload.author}`).allSockets();
-        for (const s of authorSockets) this.server.to(s).emit('commentCreated', out);
+        for (const s of authorSockets) void this.server.to(s).emit('commentCreated', out);
       }
     } catch (e) {
       this.logger.warn(`Error emitting comment.created: ${e}`);
@@ -185,12 +185,12 @@ export class FeedGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('joinPost')
   handleJoinPost(client: Socket, payload: { postId: string }) {
-    if (!client.data?.user || !client.data.user._id) {
-      client.emit('error', { message: 'Unauthorized' });
+      if (!client.data?.user || !client.data.user._id) {
+      void client.emit('error', { message: 'Unauthorized' });
       return;
     }
-    if (!payload || !payload.postId) {
-      client.emit('error', { message: 'Missing postId' });
+      if (!payload || !payload.postId) {
+      void client.emit('error', { message: 'Missing postId' });
       return;
     }
     const room = `post:${payload.postId}`;

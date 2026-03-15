@@ -4,10 +4,14 @@ import { Model, Types } from 'mongoose';
 import { FeedPost, FeedPostDocument } from './schemas/feed.schema';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 import { Multimedia, MultimediaDocument } from '../messages-and-multimedia/schemas/multimedia.schema';
+import { User, UserDocument } from 'src/user/schemas/user.schema';
+import { FeedRepository } from './feed.repository';
+import { MultimediaRepository } from '../messages-and-multimedia/messages-and-multimedia.module';
+import { UserRepository } from '../user/user.module';
+import { Types as MongooseTypes } from 'mongoose';
 import { CreatePostDto } from './dto/create-post.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UserService } from 'src/user/user.service';
-import { User, UserDocument } from 'src/user/schemas/user.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
@@ -17,15 +21,30 @@ import * as crypto from 'crypto';
 @Injectable()
 export class FeedAndMultimediaService implements OnModuleInit {
   constructor(
-    @InjectModel(FeedPost.name) private feedModel: Model<FeedPostDocument>,
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
-    @InjectModel(Multimedia.name) private multimediaModel: Model<MultimediaDocument>,
+    private readonly feedRepository: FeedRepository,
+    private readonly multimediaRepository: MultimediaRepository,
+    private readonly userRepository: UserRepository,
     private readonly userService: UserService,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly eventEmitter: EventEmitter2,
     @InjectQueue('multimedia') private readonly multimediaQueue: Queue,
     private readonly storage: LocalStorageProvider,
   ) {}
+
+  private get feedModel() {
+    return this.feedRepository.feed;
+  }
+
+  private get commentModel() {
+    return this.feedRepository.comment;
+  }
+
+  private get multimediaModel() {
+    return this.multimediaRepository.model;
+  }
+
+  private get userModel() {
+    return this.userRepository.model;
+  }
 
 
   
@@ -33,8 +52,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
   onModuleInit() {
     try {
       // avoid double-registering handlers during hot-reload/dev
-      try { (this.eventEmitter as any).removeAllListeners('multimedia.ready'); } catch (_) {}
-      try { (this.eventEmitter as any).removeAllListeners('multimedia.failed'); } catch (_) {}
+      try { void (this.eventEmitter as any).removeAllListeners('multimedia.ready'); } catch (_) {}
+      try { void (this.eventEmitter as any).removeAllListeners('multimedia.failed'); } catch (_) {}
 
       this.eventEmitter.on('multimedia.ready', async (payload: any) => {
         try {
@@ -68,8 +87,8 @@ export class FeedAndMultimediaService implements OnModuleInit {
               }
             }
 
-                const out = await this.getPostById(postDoc._id?.toString());
-            this.eventEmitter.emit('post.updated', out);
+            const out = await this.getPostById(postDoc._id?.toString());
+            void this.eventEmitter.emit('post.updated', out);
           } catch (err) {
             console.warn('multimedia.ready handler error', err);
           }
@@ -96,7 +115,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
             } catch (e) { console.warn('Failed to update post multimediaStatus to failed', e); }
 
             const out = await this.getPostById(postDoc._id?.toString());
-            this.eventEmitter.emit('post.updated', out);
+            void this.eventEmitter.emit('post.updated', out);
           } catch (err) {
             console.warn('multimedia.failed handler error', err);
           }
@@ -104,7 +123,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       });
 
       // listen for user profile updates to sync denormalized author names on posts
-      try { (this.eventEmitter as any).removeAllListeners('user.updated'); } catch (_) {}
+      try { void (this.eventEmitter as any).removeAllListeners('user.updated'); } catch (_) {}
       this.eventEmitter.on('user.updated', async (payload: any) => {
         try {
           const userId = payload?._id || payload?.id || payload?.userId;
@@ -126,7 +145,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
             for (const p of posts) {
               try {
                 const out = await this.getPostById(p._id?.toString());
-                this.eventEmitter.emit('post.updated', out);
+                void this.eventEmitter.emit('post.updated', out);
               } catch (_) {}
             }
           } catch (e) { console.warn('Failed to emit post.updated after author name sync', e); }
@@ -206,7 +225,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
     const created = await this.feedModel.create(postPayload);
 
     const out = await this.getPostById(created._id?.toString());
-    this.eventEmitter.emit('post.created', out);
+    void this.eventEmitter.emit('post.created', out);
     return out;
   }
 
@@ -285,8 +304,12 @@ export class FeedAndMultimediaService implements OnModuleInit {
 
           const p = Array.isArray(created) ? created[0] : created;
 
-          // link multimedia -> post (atomic update within session)
-          await this.multimediaModel.updateOne({ _id: mDoc._id }, { $set: { message: p._id, status: 'processing', url: uploadResult.url } }, { session }).exec();
+          // link multimedia -> post (atomic update within session) - going through repository if available
+          if ((this as any).multimediaRepository?.updateOne) {
+            await (this as any).multimediaRepository.updateOne({ _id: mDoc._id }, { $set: { message: p._id, status: 'processing', url: uploadResult.url } }, { session }).exec();
+          } else {
+            await (this as any).multimediaModel.updateOne({ _id: mDoc._id }, { $set: { message: p._id, status: 'processing', url: uploadResult.url } }, { session }).exec();
+          }
 
           createdPostId = p._id?.toString();
           createdMultimediaDoc = mDoc;
@@ -380,7 +403,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
     }
 
     const out = await this.getPostById(createdPostId);
-    this.eventEmitter.emit('post.created', out);
+    void this.eventEmitter.emit('post.created', out);
     return out;
   }
 
@@ -494,7 +517,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
     }
 
     const out = await this.getPostById(postId);
-    this.eventEmitter.emit('post.updated', out);
+    void this.eventEmitter.emit('post.updated', out);
     return out;
   }
 
@@ -536,7 +559,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       if (key) await this.storage.delete(key);
     } catch (_) {}
 
-    this.eventEmitter.emit('post.deleted', { _id: postId, author: actorId });
+    void this.eventEmitter.emit('post.deleted', { _id: postId, author: actorId });
     return { success: true };
   }
 
@@ -616,7 +639,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       createdAt: (created as any).createdAt,
     };
 
-    this.eventEmitter.emit('comment.created', out);
+    void this.eventEmitter.emit('comment.created', out);
     return out;
   }
 
@@ -688,7 +711,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       updatedAt: (updated as any).updatedAt,
     };
 
-    try { this.eventEmitter.emit('comment.updated', { _id: out._id, post: out.post }); } catch(_){}
+    try { void this.eventEmitter.emit('comment.updated', { _id: out._id, post: out.post }); } catch(_){}
     return out;
   }
 
@@ -718,7 +741,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       updatedAt: (updated as any).updatedAt,
     };
 
-    try { this.eventEmitter.emit('comment.updated', { _id: out._id, post: out.post }); } catch(_){}
+    try { void this.eventEmitter.emit('comment.updated', { _id: out._id, post: out.post }); } catch(_){}
     return out;
   }
 
@@ -740,7 +763,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       console.warn('Failed to decrement commentsCount for post on comment delete', err);
     }
 
-    this.eventEmitter.emit('comment.deleted', { _id: commentId, post: comment.post?.toString() });
+    void this.eventEmitter.emit('comment.deleted', { _id: commentId, post: comment.post?.toString() });
     return { success: true };
   }
 
@@ -780,7 +803,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       updatedAt: (updated as any).updatedAt,
     };
 
-    this.eventEmitter.emit('post.updated', out);
+    void this.eventEmitter.emit('post.updated', out);
     return out;
   }
 
@@ -817,7 +840,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       updatedAt: (updated as any).updatedAt,
     };
 
-    this.eventEmitter.emit('post.updated', out);
+    void this.eventEmitter.emit('post.updated', out);
     return out;
   }
 
@@ -847,7 +870,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       updatedAt: (updated as any).updatedAt,
     };
 
-    this.eventEmitter.emit('post.updated', out);
+    void this.eventEmitter.emit('post.updated', out);
     return out;
   }
 
@@ -876,7 +899,7 @@ export class FeedAndMultimediaService implements OnModuleInit {
       updatedAt: (updated as any).updatedAt,
     };
 
-    try { this.eventEmitter.emit('post.updated', out); } catch (_) {}
+    try { void this.eventEmitter.emit('post.updated', out); } catch (_) {}
     return out;
   }
 
