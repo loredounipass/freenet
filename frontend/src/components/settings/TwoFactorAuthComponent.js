@@ -26,10 +26,18 @@ const TwoFactorAuthComponent = () => {
       }
       try {
         const response = await User.getTokenStatus({ signal: controller.signal });
+        
+        // Handle both { isTokenEnabled: boolean } and { data: { isTokenEnabled: boolean } }
         const tokenStatus = response?.data?.isTokenEnabled ?? response?.data?.data?.isTokenEnabled;
         setIsTokenEnabled(Boolean(tokenStatus));
       } catch (err) {
-        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+        // Ignore cancellation errors - these are expected when component unmounts
+        const isCanceled = err.name === 'CanceledError' || 
+                          err.name === 'AbortError' || 
+                          err.code === 'ERR_CANCELED' ||
+                          err.message?.includes('canceled');
+        if (!isCanceled) {
+          console.error('[2FA] Error fetching token status:', err);
           setError(err.message || 'Error fetching token status');
         }
       } finally {
@@ -55,10 +63,15 @@ const TwoFactorAuthComponent = () => {
     setShowWarning(!newStatus);
     setLoading(true);
     try {
-      const res = await updateTokenStatus({ email: auth.email, isTokenEnabled: newStatus });
-      setSnackbar({ open: true, message: newStatus ? 'Autenticación de dos factores activada.' : 'Autenticación de dos factores desactivada.', severity: 'success' });
+      const res = await updateTokenStatus(newStatus);
+      setSnackbar({ 
+        open: true, 
+        message: newStatus ? 'Autenticación de dos factores activada.' : 'Autenticación de dos factores desactivada.', 
+        severity: 'success' 
+      });
       return res;
     } catch (err) {
+      console.error('[2FA] Error updating token status:', err);
       setIsTokenEnabled(previousStatus);
       setShowWarning(!previousStatus);
       setError(err?.message || 'No se pudo actualizar el estado.');

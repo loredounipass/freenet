@@ -7,8 +7,13 @@ import { randomInt } from 'crypto';
 // Service for sending various types of emails to users
 @Injectable()
 export class EmailService {
+  private readonly FROM_NAME = 'Freeus';
+  private readonly FROM_EMAIL = 'noreply@freeus.com';
+  private readonly FRONTEND_URL: string;
+  
   private transporter: any;
   constructor(private readonly configService: ConfigService) {
+    this.FRONTEND_URL = this.configService.get<string>('FRONTEND_URL') || 'https://tudominio.com';
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -21,7 +26,7 @@ export class EmailService {
   // Sends a login token email to the user with security tips
   async sendTokenLogin(toEmail: string, token: string): Promise<void> {
     const mailOptions = {
-      from: 'Freeus <noreply@freeus.com>',
+      from: `${this.FROM_NAME} <${this.FROM_EMAIL}>`,
       to: toEmail,
       subject: 'Token de verificación para iniciar sesión',
       html: `
@@ -98,10 +103,10 @@ export class EmailService {
 
   // Sends a verification email to the user with a link to verify their email address
   async sendVerificationEmail(email: string): Promise<void> {
-    const verificationUrl = `https://cuddly-broccoli-x795wpw9p55fpg5r-3000.app.github.dev/verifyemail`;
+    const verificationUrl = `${this.FRONTEND_URL}/verifyemail`;
 
     const mailOptions = {
-      from: 'freenet <noreply@freenet.com>',
+      from: `${this.FROM_NAME} <${this.FROM_EMAIL}>`,
       to: email,
       subject: 'Verifica tu correo electrónico',
       html: `
@@ -160,12 +165,12 @@ export class EmailService {
 
   // Sends a forgot password email to the user with a link to reset their password
   async sendForgotPasswordEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `http://localhost:3000/reset-password?email=${encodeURIComponent(
+    const resetUrl = `${this.FRONTEND_URL}/reset-password?email=${encodeURIComponent(
       email,
     )}&token=${encodeURIComponent(token)}`;
 
     const mailOptions = {
-      from: 'freenet <noreply@freenet.com>',
+      from: `${this.FROM_NAME} <${this.FROM_EMAIL}>`,
       to: email,
       subject: 'Restablece tu contraseña',
       html: `
@@ -226,7 +231,7 @@ export class EmailService {
 // Sends a login notification email to the user with security tips
   async sendLoginNotificationEmail(toEmail: string): Promise<void> {
     const mailOptions = {
-      from: 'freenet <noreply@freenet.com>',
+      from: `${this.FROM_NAME} <${this.FROM_EMAIL}>`,
       to: toEmail,
       subject: 'Notificación de Inicio de sesión',
       html: `

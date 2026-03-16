@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, BadRequestException, Unauthor
 import { TokenRepository } from './token.repository';
 import { EmailService } from '../user/email.service';
 import * as bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class TwoFactorAuthService {
@@ -92,9 +93,8 @@ export class TwoFactorAuthService {
         throw new BadRequestException(`Debes esperar ${remainingSec} segundos antes de solicitar otro token.`);
       }
 
-      // Generate a 6-digit token
-      const num = Math.floor(Math.random() * 1000000);
-      const token = String(num).padStart(6, '0');
+      // Generate a 6-digit token using cryptographically secure random
+      const token = String(randomInt(0, 1000000)).padStart(6, '0');
       const tokenHash = await bcrypt.hash(token, 12);
 
       // Upsert a single active token document per email. This reduces writes and keeps only
@@ -114,7 +114,7 @@ export class TwoFactorAuthService {
 
       await this.emailService.sendTokenLogin(toEmail, token);
 
-      return { message: `Token enviado a ${toEmail}` };
+      return { message: 'Token enviado correctamente' };
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
       console.error('Error al crear/enviar token', error);

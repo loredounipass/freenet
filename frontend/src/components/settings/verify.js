@@ -1,29 +1,23 @@
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../../hooks/AuthContext';
-import User from '../../services/user';
+import useAuth from '../../hooks/useAuth';
 
 const EmailVerificationComponent = () => {
     const { auth } = useContext(AuthContext);
+    const { verifyEmail } = useAuth();
     const [openDialog, setOpenDialog] = useState(false);
     const [dialogMessage, setDialogMessage] = useState('');
     const [showCloseMessage, setShowCloseMessage] = useState(false);
 
-    const verifyEmail = async (email) => {
-        try {
-            const { data } = await User.verifyEmail({ email });
-            if (data && data.message === 'Correo electrónico verificado con éxito.') {
-                handleVerificationResult({ verified: true, message: `✔️ ${data.message}` });
-            } else {
-                handleVerificationResult({ verified: false, message: data.error || 'Error al verificar el correo electrónico.' });
-            }
-        } catch (err) {
-            handleVerificationResult({ verified: false, message: err.message });
-        }
-    };
-
-    const handleVerifyClick = () => {
+    const handleVerifyClick = async () => {
         if (auth && auth.email) {
-            verifyEmail(auth.email);
+            try {
+                // No need to pass email - it comes from authenticated session
+                await verifyEmail();
+                handleVerificationResult({ verified: true, message: 'Correo electrónico verificado con éxito.' });
+            } catch (err) {
+                handleVerificationResult({ verified: false, message: err.message || 'Error al verificar el correo electrónico.' });
+            }
         } else {
             handleVerificationResult({ verified: false, message: 'No se encontró el correo electrónico autenticado.' });
         }

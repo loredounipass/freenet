@@ -2,12 +2,61 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 
 const baseApi = 'http://localhost:4000/secure/api'
+const apiBase = 'http://localhost:4000'
 
 // Base origin for non-API assets (media). Derived from baseApi origin.
 const apiOrigin = (() => {
     try { return new URL(baseApi).origin; } catch (_) { return 'http://localhost:4000'; }
 })();
 const mediaBase = `${apiOrigin}/uploads`;
+
+// CSRF Token management - fetch token from server
+async function fetchCsrfToken() {
+    try {
+        const response = await axios.get(`${apiBase}/csrf-token`, { withCredentials: true });
+        if (response.data?.csrfToken) {
+            return response.data.csrfToken;
+        }
+    } catch (err) {
+        console.warn('Failed to fetch CSRF token:', err);
+    }
+    return null;
+}
+
+// Function to get CSRF token from cookie
+function getCsrfTokenFromCookie() {
+    try {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'XSRF-TOKEN') {
+                return decodeURIComponent(value);
+            }
+        }
+    } catch (_) {}
+    return null;
+}
+
+// Initialize CSRF token on load
+fetchCsrfToken().then(token => {
+    if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    }
+});
+
+// Axios interceptor to add CSRF token to every request
+axios.interceptors.request.use((config) => {
+    const csrfToken = getCsrfTokenFromCookie();
+    if (csrfToken) {
+        config.headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+    return config;
+});
+
+// Also refresh CSRF token on each page load
+if (typeof window !== 'undefined') {
+    window.addEventListener('focus', fetchCsrfToken);
+}
 
 // Endpoints usuario
 const loginApi = `${baseApi}/user/login`

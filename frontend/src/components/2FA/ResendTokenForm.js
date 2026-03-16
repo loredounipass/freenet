@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 
 const ResendTokenForm = () => {
     const { resendToken, error, successMessage } = useAuth();
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(() => localStorage.getItem('email') || '');
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (successMessage === 'Código de verificación reenviado a tu correo electrónico.') {
+        if (successMessage && successMessage.includes('código de verificación')) {
             navigate('/verifytoken');
         }
     }, [successMessage, navigate]);
@@ -16,7 +16,7 @@ const ResendTokenForm = () => {
     const handleSubmit = async (event) => {
         event.preventDefault();
         try {
-            await resendToken({ email });
+            await resendToken(email);
         } catch (err) {
             console.error(err);
         }

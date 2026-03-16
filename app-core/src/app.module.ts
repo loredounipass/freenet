@@ -11,6 +11,7 @@ import { MessagesAndMultimediaModule } from './messages-and-multimedia/messages-
 import { FeedAndMultimediaModule } from './feed-and-multimedia/feed-and-multimedia.module';
 import { ProfileModule } from './profile/profile.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { AppController } from './app.controller';
 
 
 // This is the main application module that imports and configures various modules and services.
@@ -22,8 +23,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       delimiter: '.',
     }),
     ThrottlerModule.forRoot({
-      ttl: parseInt(process.env.RATE_LIMIT_TTL!),
-      limit: parseInt(process.env.RATE_LIMIT!),
+      ttl: 60000,
+      limit: 100,
     }),
     
     MongooseModule.forRoot(
@@ -47,6 +48,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     TwoFactorAuthModule,
     DonationsModule
   ],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule { }

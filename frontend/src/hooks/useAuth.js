@@ -102,10 +102,11 @@ export default function useAuth() {
         }
     };
 
-    const resendToken = async (body) => {
+    const resendToken = async (email) => {
         try {
-            const { data } = await User.resendToken(body);
-            if (data && data.message === 'Código de verificación reenviado a tu correo electrónico.') {
+            // Optional email parameter for 2FA flow - if not provided, uses session email
+            const { data } = await User.resendToken(email);
+            if (data && data.message) {
                 setSuccessMessage(data.message);
             } else {
                 setError(data.error || 'Error al reenviar el código de verificación.');
@@ -135,11 +136,12 @@ export default function useAuth() {
         }
     };
 
-    const updateTokenStatus = async (body) => {
+    const updateTokenStatus = async (isTokenEnabled) => {
         try {
-            const response = await User.updateTokenStatus(body);
+            // Only send isTokenEnabled - email comes from authenticated session
+            const response = await User.updateTokenStatus({ isTokenEnabled });
             const { data } = response || {};
-            if (data && data.msg === 'Seguridad de la cuenta actualizada con éxito.') {
+            if (data && (data.msg === 'Seguridad de la cuenta actualizada con éxito.' || data.message?.includes('actualizada'))) {
                 setSuccessMessage('Seguridad de la cuenta actualizada con éxito.');
             } else {
                 setError(data?.error || 'Error al actualizar el estado de seguridad.');
@@ -171,9 +173,10 @@ export default function useAuth() {
         }
     };
 
-    const verifyEmail = async (email) => {
+    const verifyEmail = async () => {
         try {
-            const { data } = await User.verifyEmail({ email });
+            // No body needed - email comes from authenticated session
+            const { data } = await User.verifyEmail();
             if (data && data.message === 'Correo electrónico verificado con éxito.') {
                 setSuccessMessage(data.message);
             } else {

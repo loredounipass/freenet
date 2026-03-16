@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": [
+    "src/App.test.js",
+    "src/reportWebVitals.js",
+    "src/setupTests.js"
+  ]
+}

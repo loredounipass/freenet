@@ -237,10 +237,24 @@ async sendVerificationEmail(email: string): Promise<boolean> {
     return result;
   }
 
+  // Sanitize search query to prevent ReDoS attacks
+  private sanitizeSearchQuery(q: string): string {
+    if (!q || typeof q !== 'string') return '';
+    // Limit input length to 50 characters
+    const truncated = q.substring(0, 50);
+    // Escape regex special characters
+    return truncated.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // Search users by query -- supports partial name/email and exact ObjectId
   async searchUsers(q: string) {
     if (!q) return [];
-    const regex = new RegExp(q, 'i');
+    
+    // Sanitize input to prevent ReDoS attacks - escape regex special characters
+    const sanitized = this.sanitizeSearchQuery(q);
+    if (!sanitized) return [];
+    
+    const regex = new RegExp(sanitized, 'i');
     const or: any[] = [
       { email: regex },
       { firstName: regex },
@@ -252,7 +266,9 @@ async sendVerificationEmail(email: string): Promise<boolean> {
       or.push({ _id: q });
     }
 
-    const users = await this.userRepository.find({ $or: or }).limit(20).select('-password').lean().exec();
+    // Enforce maximum limit of 20 results to prevent abuse
+    const MAX_LIMIT = 20;
+    const users = await this.userRepository.find({ $or: or }).limit(MAX_LIMIT).select('-password').lean().exec();
 
     // Fetch profile photos for the matching users and merge into results so frontend can render avatars
     try {
