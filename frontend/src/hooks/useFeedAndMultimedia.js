@@ -12,7 +12,6 @@ export default function useFeedAndMultimedia() {
 
 	const mergePosts = (existing = [], incoming = []) => {
 		const map = new Map()
-		// insert incoming first, but merge with existing to preserve media/author fields if missing
 		;(incoming || []).forEach((p) => {
 			if (!p || !p._id) return
 			map.set(p._id, p)
@@ -22,9 +21,8 @@ export default function useFeedAndMultimedia() {
 			if (!map.has(p._id)) {
 				map.set(p._id, p)
 			} else {
-				// merge: prefer incoming values, but keep multimedia/author fields from existing if incoming lacks them
 				const inc = map.get(p._id) || {}
-				const merged = Object.assign({}, inc)
+				const merged = { ...inc }
 				if (!inc.multimediaUrl && p.multimediaUrl) merged.multimediaUrl = p.multimediaUrl
 				if (!inc.thumbnailUrl && p.thumbnailUrl) merged.thumbnailUrl = p.thumbnailUrl
 				if (!inc.multimedia && p.multimedia) merged.multimedia = p.multimedia
@@ -32,7 +30,6 @@ export default function useFeedAndMultimedia() {
 				if (!inc.authorLastName && p.authorLastName) merged.authorLastName = p.authorLastName
 				if ((inc.likesCount === undefined || inc.likesCount === null) && (p.likesCount !== undefined)) merged.likesCount = p.likesCount
 				if ((inc.commentsCount === undefined || inc.commentsCount === null) && (p.commentsCount !== undefined)) merged.commentsCount = p.commentsCount
-				// preserve likes array from existing post when incoming payload omits it
 				if (!inc.likes && Array.isArray(p.likes)) merged.likes = p.likes
 				map.set(p._id, merged)
 			}
@@ -46,22 +43,51 @@ export default function useFeedAndMultimedia() {
 		try { return err?.response?.data?.message || err?.message || JSON.stringify(err) } catch (_) { return String(err) }
 	}
 
-	const loadMyPosts = useCallback(async (limit = 50) => {
-		setLoading(true)
-		setError(null)
-		try {
-			const res = await feedService.getFeed(limit)
-			setPosts(res.data || [])
-		} catch (err) {
-			setError(err)
-		} finally {
-			setLoading(false)
-		}
-	}, [])
-
+	// Load posts with AbortController to prevent race conditions
 	useEffect(() => {
-		loadMyPosts()
-	}, [loadMyPosts])
+		const controller = new AbortController();
+		let mounted = true;
+		
+		const fetchPosts = async () => {
+			setLoading(true);
+			setError(null);
+			try {
+				const res = await feedService.getFeed(50, { signal: controller.signal });
+				if (mounted && !controller.signal.aborted) {
+					setPosts(res.data || []);
+				}
+			} catch (err) {
+				if (mounted && !controller.signal.aborted) {
+					setError(err);
+				}
+			} finally {
+				if (mounted && !controller.signal.aborted) {
+					setLoading(false);
+				}
+			}
+		};
+		
+		fetchPosts();
+		
+		return () => {
+			mounted = false;
+			controller.abort();
+		};
+	}, []); // Empty deps - only run on mount
+
+	// Exported function to manually reload posts (for pull-to-refresh, etc.)
+	const loadMyPosts = useCallback(async (limit = 50) => {
+		setLoading(true);
+		setError(null);
+		try {
+			const res = await feedService.getFeed(limit);
+			setPosts(res.data || []);
+		} catch (err) {
+			setError(err);
+		} finally {
+			setLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
 		// establish socket connection to /feed namespace once on mount

@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import useAuth from '../../hooks/useAuth'; 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ResendTokenForm = () => {
     const { resendToken, error, successMessage } = useAuth();
-    const [email, setEmail] = useState(() => localStorage.getItem('email') || '');
     const navigate = useNavigate();
+    const location = useLocation();
+    
+    // Get email from navigation state instead of localStorage (security fix)
+    const [email, setEmail] = useState(() => location.state?.email || '');
 
     useEffect(() => {
         if (successMessage && successMessage.includes('código de verificación')) {
-            navigate('/verifytoken');
+            navigate('/verifytoken', { state: { email } });
         }
-    }, [successMessage, navigate]);
+    }, [successMessage, navigate, email]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();

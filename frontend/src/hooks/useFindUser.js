@@ -15,23 +15,38 @@ export default function useFindUser() {
             if (profileData?.profilePhotoUrl) {
                 return { ...user, profilePhotoUrl: profileData.profilePhotoUrl };
             }
-        } catch (_) { /* ignore — profile may not exist yet */ }
+        } catch (err) { 
+            console.error('Error enriching user with profile:', err);
+        }
         return user;
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
+        
         async function findUser() {
             try {
                 const { data } = await User.getInfo();
+                if (cancelled) return;
+                
                 if (data && 'data' in data) {
                     const user = data.data;
                     const enriched = await enrichWithProfile(user);
-                    setAuth(enriched);
+                    if (!cancelled) {
+                        setAuth(enriched);
+                    }
                 }
-            } catch (_) { }
-            setLoading(false);
+            } catch (err) { 
+                console.error('Error finding user:', err);
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
         }
         findUser();
+        
+        return () => { cancelled = true; };
     }, [enrichWithProfile]);
 
     return {

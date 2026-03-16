@@ -21,7 +21,7 @@ export default function FeedItem({ post, actions = {} }) {
     let cancelled = false
     profileService.getProfileById(String(post.author))
       .then((res) => { if (!cancelled) setAuthorProfile((res?.data ?? res)) })
-      .catch(() => {})
+      .catch((err) => console.error('[FeedItem] Error fetching author profile:', err))
     return () => { cancelled = true }
   }, [post?.author, isMyPost])
 
@@ -33,29 +33,33 @@ export default function FeedItem({ post, actions = {} }) {
     let cancelled = false
     profileService.getFollowStatus(String(post.author))
       .then((res) => { if (!cancelled) setFollowing((res?.data ?? res)?.following ?? false) })
-      .catch(() => {})
+      .catch((err) => console.error('[FeedItem] Error fetching follow status:', err))
     return () => { cancelled = true }
   }, [post?.author, isMyPost])
 
   const handleFollow = useCallback(async () => {
-    if (followLoading) return
+    if (followLoading || following) return
     setFollowLoading(true)
     try {
       await profileService.followUser(String(post.author))
       setFollowing(true)
-    } catch (_) {}
+    } catch (err) {
+      console.error('[FeedItem] Error following user:', err)
+    }
     finally { setFollowLoading(false) }
-  }, [post?.author, followLoading])
+  }, [post?.author, followLoading, following])
 
   const handleUnfollow = useCallback(async () => {
-    if (followLoading) return
+    if (followLoading || !following) return
     setFollowLoading(true)
     try {
       await profileService.unfollowUser(String(post.author))
       setFollowing(false)
-    } catch (_) {}
+    } catch (err) {
+      console.error('[FeedItem] Error unfollowing user:', err)
+    }
     finally { setFollowLoading(false) }
-  }, [post?.author, followLoading])
+  }, [post?.author, followLoading, following])
 
   // Derive initial liked state from post.likes array (contains user IDs)
   const isLikedByMe = (p) => {
@@ -79,34 +83,31 @@ export default function FeedItem({ post, actions = {} }) {
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(true)
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     try {
       const v = videoRef.current
       if (!v) return
       if (v.paused) {
-        v.play().catch(() => {})
+        v.play().catch((err) => console.error('[FeedItem] Play error:', err))
         setPlaying(true)
-        // user-initiated play
       } else {
         v.pause()
         setPlaying(false)
-        // user-initiated pause
       }
-    } catch (_) {}
-  }
+    } catch (err) { console.error('[FeedItem] Toggle play error:', err) }
+  }, [])
 
-  const toggleMuteLocal = (e) => {
+  const toggleMuteLocal = useCallback((e) => {
     try {
       if (e && e.stopPropagation) e.stopPropagation()
       const v = videoRef.current
-      // toggle muted state locally and update the video element if present
       setMuted((m) => {
         const nm = !m
-        try { if (v) v.muted = nm } catch (_) {}
+        try { if (v) v.muted = nm } catch (err) { console.error('[FeedItem] Mute error:', err) }
         return nm
       })
-    } catch (_) {}
-  }
+    } catch (err) { console.error('[FeedItem] Toggle mute error:', err) }
+  }, [])
 
   useEffect(() => {
     if (!post || !post._id || typeof window === 'undefined') return

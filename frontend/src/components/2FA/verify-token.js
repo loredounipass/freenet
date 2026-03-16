@@ -1,50 +1,70 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 
 const VerifyToken = () => {
     const [formValues, setFormValues] = useState({ token: '' });
-    const { verifyToken, error } = useAuth();
+    const { verifyToken, setError: clearAuthError } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [localError, setLocalError] = useState(null);
+    const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
     const navigate = useNavigate();
-    const isMounted = useRef(true);
+    const location = useLocation();
+
+    const email = location.state?.email;
 
     useEffect(() => {
         return () => {
-            isMounted.current = false;
+            clearAuthError();
         };
-    }, []);
+    }, [clearAuthError]);
 
     const handleChange = (e) => {
         setFormValues({ ...formValues, [e.target.name]: e.target.value });
+        if (error) setError(null);
+        if (success) setSuccess(null);
     };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        const storedEmail = localStorage.getItem('email');
-        if (!storedEmail) {
-            setLocalError('No se encontró el correo electrónico. Por favor, asegúrate de que estés autenticado.');
+        if (!email) {
+            setError('No se encontró el correo electrónico. Por favor, inicia sesión nuevamente.');
+            return;
+        }
+
+        if (!formValues.token || formValues.token.trim().length === 0) {
+            setError('Por favor, ingresa el código de verificación.');
+            return;
+        }
+
+        if (formValues.token.length < 6) {
+            setError('El código debe tener al menos 6 dígitos.');
             return;
         }
 
         setLoading(true);
-        setTimeout(async () => {
-            try {
-                const response = await verifyToken({ email: storedEmail, ...formValues });
-                if (isMounted.current && response?.msg === 'Logged in!') {
-                    navigate('/');
-                }
-            } catch (err) {
-            } finally {
-                if (isMounted.current) setLoading(false);
+        setError(null);
+        setSuccess(null);
+
+        try {
+            const result = await verifyToken({ email, token: formValues.token });
+            
+            if (result?.ok && result?.msg === 'Logged in!') {
+                setSuccess('¡Verificación exitosa! Redirigiendo...');
+                setTimeout(() => navigate('/'), 1500);
+            } else if (result?.error) {
+                setError(result.error);
             }
-        }, 2000);
+        } catch (err) {
+            setError('Error de conexión. Por favor, verifica tu conexión a internet e intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleResend = () => {
-        navigate('/resendtoken');
+        navigate('/resendtoken', { state: { email } });
     };
 
     return (
@@ -86,8 +106,8 @@ const VerifyToken = () => {
                         </div>
                     </div>
 
-                    {localError && <div className="error-note">{localError}</div>}
                     {error && <div className="error-note">{error}</div>}
+                    {success && <div style={{ color: '#7fffd4', textAlign: 'center', marginTop: '0.5rem', fontWeight: 500 }}>{success}</div>}
                 </form>
             </div>
         </div>

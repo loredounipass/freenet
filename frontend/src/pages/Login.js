@@ -78,7 +78,8 @@ export default function Login() {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
 
-    localStorage.setItem('email', data.email);
+    // Pass email via navigation state instead of localStorage (security fix)
+    const email = data.email;
 
     setToast('');
     setLoading(true);
@@ -99,7 +100,7 @@ export default function Login() {
     if (result?.ok && result?.data) {
       const msg = result.data.msg;
       if (msg === 'Código de verificación enviado a tu correo electrónico.') {
-        navigate('/verifytoken');
+        navigate('/verifytoken', { state: { email } });
       }
       // 'Logged in!' → setUserContext already called navigate('/') inside the hook
     } else {

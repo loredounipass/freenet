@@ -67,7 +67,12 @@ export default function useAuth() {
             const { data } = await User.login(body);
             if (data && 'msg' in data) {
                 if (data.msg === 'Logged in!') {
-                    try { await setUserContext(); } catch (_) {}
+                    try { 
+                        await setUserContext(); 
+                    } catch (err) {
+                        console.error('Error setting user context after login:', err);
+                        setError('Error al cargar la sesión. Por favor, intenta de nuevo.');
+                    }
                 }
                 return { ok: true, data };
             } else {
@@ -92,13 +97,37 @@ export default function useAuth() {
             const { data } = await User.verifyToken(body);
             if (data && data.msg === 'Logged in!') {
                 await setUserContext();
+                return { ok: true, msg: data.msg };
             } else if (data && data.msg === 'Código de verificación enviado a tu correo electrónico.') {
-                return data;
+                return { ok: true, msg: data.msg };
             } else {
-                setError(data.error || 'Código de verificación inválido.');
+                const errorMsg = data?.error || 'Código de verificación inválido.';
+                setError(errorMsg);
+                return { ok: false, error: errorMsg };
             }
         } catch (err) {
-            setError('Token incorrecto verifica tu correo electrónico.');
+            const status = err?.response?.status;
+            const backendMessage = err?.response?.data?.message 
+                || err?.response?.data?.error 
+                || err?.message;
+
+            let errorMsg;
+            switch (status) {
+                case 401:
+                    errorMsg = backendMessage || 'Token incorrecto. Verifica tu correo electrónico.';
+                    break;
+                case 400:
+                    errorMsg = backendMessage || 'Datos inválidos. Verifica la información.';
+                    break;
+                case 404:
+                    errorMsg = backendMessage || 'Usuario no encontrado.';
+                    break;
+                default:
+                    errorMsg = backendMessage || 'Error al verificar el token. Intenta de nuevo.';
+            }
+            
+            setError(errorMsg);
+            return { ok: false, error: errorMsg };
         }
     };
 
@@ -228,6 +257,7 @@ export default function useAuth() {
         sendVerificationEmail,
         isEmailVerified,
         error,
-        successMessage
+        successMessage,
+        setError,
     };
 }

@@ -1,8 +1,10 @@
 import axios from 'axios'
 axios.defaults.withCredentials = true
 
-const baseApi = 'http://localhost:4000/secure/api'
-const apiBase = 'http://localhost:4000'
+// Environment-based API URLs (security fix)
+const envApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const baseApi = `${envApiUrl}/secure/api`;
+const apiBase = envApiUrl;
 
 // Base origin for non-API assets (media). Derived from baseApi origin.
 const apiOrigin = (() => {
@@ -53,9 +55,32 @@ axios.interceptors.request.use((config) => {
     return config;
 });
 
-// Also refresh CSRF token on each page load
+// CSRF token refresh on window focus (with cleanup to prevent memory leaks)
+let csrfFocusHandler = null;
+
+function setupCsrfRefresh() {
+    if (typeof window !== 'undefined' && !csrfFocusHandler) {
+        csrfFocusHandler = () => {
+            fetchCsrfToken().then(token => {
+                if (token) {
+                    axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+                }
+            });
+        };
+        window.addEventListener('focus', csrfFocusHandler);
+    }
+}
+
+function cleanupCsrfListener() {
+    if (typeof window !== 'undefined' && csrfFocusHandler) {
+        window.removeEventListener('focus', csrfFocusHandler);
+        csrfFocusHandler = null;
+    }
+}
+
+// Initialize CSRF refresh
 if (typeof window !== 'undefined') {
-    window.addEventListener('focus', fetchCsrfToken);
+    setupCsrfRefresh();
 }
 
 // Endpoints usuario
@@ -211,4 +236,5 @@ export {
     profileUnfollowApi,
     donationsWalletsApi,
     getDonationsWallets,
+    cleanupCsrfListener,
 };
