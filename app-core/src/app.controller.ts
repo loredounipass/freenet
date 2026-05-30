@@ -4,16 +4,14 @@ import { Request, Response } from 'express';
 @Controller()
 export class AppController {
   @Get('csrf-token')
-  getCsrfToken(@Req() req: Request, @Res() res: Response) {
-    const csrfToken = (req as any).session?.csrfToken;
-    if (csrfToken) {
-      res.cookie('XSRF-TOKEN', csrfToken, {
-        httpOnly: false,
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        secure: process.env.NODE_ENV === 'production'
-      });
-    }
-    return res.json({ csrfToken });
+  getCsrfToken(@Req() req: any, @Res() res: Response) {
+    const token = req.csrfToken();
+    res.cookie('XSRF-TOKEN', token, {
+      httpOnly: false,
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    });
+    return res.json({ csrfToken: token });
   }
 
   @Get()

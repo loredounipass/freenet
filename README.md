@@ -1,5 +1,26 @@
 # Freeus
-Freeus is a real-time chat application built with **NestJS** and **React**. It allows users to send and receive messages instantly, providing a smooth and interactive communication experience.
+
+**Freeus** is a censorship-resistant social network built with **NestJS** and **React**. It provides a platform where users can communicate, share multimedia content, and interact without moderators or centralized content control — fostering genuine, unfiltered expression.
+
+---
+
+## 📸 Screenshots
+
+![Panel](frontend/assets/screenshots/Panel.png)
+
+![Feed](frontend/assets/screenshots/Feed.png)
+
+![Videos](frontend/assets/screenshots/Videos.png)
+
+![Discover](frontend/assets/screenshots/Discover.png)
+
+![Profile](frontend/assets/screenshots/Profile.png)
+
+![Settings](frontend/assets/screenshots/Settings.png)
+
+![Chat1](frontend/assets/screenshots/Chat1.png)
+
+![Chat2](frontend/assets/screenshots/chat2.png)
 
 ---
 
@@ -28,6 +49,18 @@ These technologies help build a scalable application with real-time capabilities
 ---
 
 ## 🚀 Installation & Running
+
+### Docker (recommended)
+
+Start all services (MongoDB, Redis, backend, frontend) with a single command:
+
+```bash
+docker-compose up
+```
+
+> Ensure Docker and Docker Compose are installed on your system.
+
+### Manual setup
 Follow these steps using two terminals (one for backend and one for frontend).
 
 ### Backend (`app-core`)
@@ -41,11 +74,11 @@ cd app-core
 
 ```env
 PORT=4000
-DB_URI=mongodb://localhost:27017/chatty
+DB_URI=mongodb://localhost:27017/freeusdb
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 TOKEN_SECRET=changeme
-EXPIRE_IN=86400000
+EXPIRE_IN=604800000
 RATE_LIMIT_TTL=60
 RATE_LIMIT=10
 EMAIL_USER=you@example.com
@@ -56,30 +89,7 @@ EMAIL_PASS=yourpassword
 
 ```bash
 pnpm install
-pnpm start
-```
-
-```bash
-Binary files install
-
-Ignored build scripts: @nestjs/core, ffmpeg-static, msgpackr-extract, sharp.
-
-Run "pnpm approve-builds"
-
-visit https://ffmpeg.org/download.html#build-windows
-
-download ffmpeg manually
-
-sudo apt update
-
-sudo apt install -y ffmpeg
-
-sudo apt install -y build-essential python3 make g++ libc6-dev
-
-sudo apt install -y libvips-dev
-
-pnpm install --ignore-scripts=false
-
+nest start --watch
 ```
 
 The backend listens by default on `http://localhost:4000` and exposes the API under `/secure/api`.
@@ -100,15 +110,10 @@ pnpm start
 
 The React app runs by default at `http://localhost:3000`.
 
-> If the backend runs on a different URL, update `frontend/src/api/http.js` and change `baseApi` to the correct address.
+> If the backend runs on a different URL, update `frontend/.env` or modify the default in `frontend/src/api/http.js`.
 
 ---
 
 ## 📝 Notes
 - Make sure MongoDB and Redis are running before starting the backend.
 - For production, build the backend (`pnpm run build`) and run `pnpm run start:prod` or follow standard deployment best practices.
-
----
-
-If you'd like, I can add a `.env.example` file and scripts to start both services with a single command. ✅
-

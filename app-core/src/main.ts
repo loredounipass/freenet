@@ -10,24 +10,21 @@ import Redis from 'ioredis'
 import session from 'express-session';
 import passport from 'passport';
 import { ValidationPipe } from '@nestjs/common';
-import { csrfSync } from 'csrf-sync';
 import helmet from 'helmet';
+import { csrfSync } from 'csrf-sync';
 
-
-// This is the main entry point of the application. It sets up the NestJS application, configures CORS, global prefix, validation pipes, session management with Redis, and initializes Passport for authentication. Finally, it starts the application on the specified port.
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security headers with Helmet
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
   
   app.enableCors({
     origin: ['http://localhost:3000'],
     credentials: true
   })
 
-
-  // Set a global prefix for all routes
   app.setGlobalPrefix('secure/api', {
     exclude: ['csrf-token', ''],
   });
@@ -38,8 +35,6 @@ async function bootstrap() {
     })
   );
   
-
-  // Configure session management using Redis as the session store
   const RedisStore = connectRedis(session);
   const redisClient = new Redis({
     host: process.env.REDIS_HOST!,
@@ -80,47 +75,35 @@ async function bootstrap() {
     })
   );
 
-  // Initialize Passport before CSRF
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // CSRF - only protect state-changing operations (POST, PUT, DELETE, PATCH)
   const { csrfSynchronisedProtection } = csrfSync({
     ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
   });
-  
-  // Skip CSRF for specific routes that need it (login, register, etc.)
+
+  const publicPaths = [
+    '/secure/api/user/login',
+    '/secure/api/user/register',
+    '/secure/api/user/resend-token',
+    '/secure/api/user/forgot-password',
+    '/secure/api/user/reset-password',
+    '/secure/api/user/verify-token',
+    '/secure/api/user/logout',
+    '/secure/api/user/update-token-status',
+  ];
+
   const csrfMiddleware = (req: any, res: any, next: any) => {
-    // Skip for GET requests (safe)
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-      return next();
-    }
-    
-    // Skip for specific public endpoints (includes /secure/api prefix!)
-    // Use startsWith to handle paths with query strings or trailing slashes
-    const skipPaths = [
-      '/secure/api/user/login', 
-      '/secure/api/user/register', 
-      '/secure/api/user/resend-token', 
-      '/secure/api/user/forgot-password', 
-      '/secure/api/user/reset-password',
-      '/secure/api/user/verify-token',
-      '/secure/api/user/logout',
-      '/secure/api/user/update-token-status',
-      '/secure/api/csrf-token'
-    ];
-    const shouldSkip = skipPaths.some(p => req.path.startsWith(p));
-    if (shouldSkip) {
-      return next();
-    }
-    
-    // Apply CSRF protection for other state-changing requests
-    return csrfSynchronisedProtection(req, res, next);
+    csrfSynchronisedProtection(req, res, (err?: any) => {
+      if (err && publicPaths.some(p => req.path.startsWith(p))) {
+        return next();
+      }
+      next(err);
+    });
   };
-  
+
   app.use(csrfMiddleware);
 
-  // Serve uploaded files
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   await app.listen(parseInt(process.env.PORT!));
